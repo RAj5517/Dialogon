@@ -4,3 +4,7 @@ dnspython==2.7.0
 pymongo==4.11.1
 sqlparse==0.5.3
 tzdata==2025.1
+python-dotenv
+mongoengine
+djangorestframework
+django-cors-headers
