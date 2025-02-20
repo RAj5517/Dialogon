@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Input } from '../ui/Input';
-import { api } from '../../utils/api';
+import axios from 'axios';
 
 const LoginForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
+    login: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -19,13 +19,22 @@ const LoginForm = () => {
     setLoading(true);
 
     try {
-      const data = await api.login(formData);
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      const response = await axios.post('http://localhost:8000/api/auth/login/', formData);
+      if (response.data.user) {
+        // Store user data in localStorage or context if needed
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        navigate('/dashboard');
       }
-      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      if (err.response) {
+        // Server responded with error
+        setError(err.response.data.message || "An error occurred during login");
+      } else if (err.request) {
+        // Network error
+        setError("Unable to connect to server. Please check your internet connection.");
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -54,12 +63,12 @@ const LoginForm = () => {
       )}
 
       <div className="flex flex-col gap-2">
-        <label className="text-gray-400 text-sm font-medium">Email</label>
+        <label className="text-gray-400 text-sm font-medium">Email or Username</label>
         <Input
-          type="email"
-          name="email"
-          placeholder="Enter your email"
-          value={formData.email}
+          type="text"
+          name="login"
+          placeholder="Enter your email or username"
+          value={formData.login}
           onChange={handleChange}
           required
           disabled={loading}
