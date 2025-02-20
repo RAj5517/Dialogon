@@ -36,13 +36,33 @@ const SignupForm = () => {
     try {
       const response = await axios.post('http://localhost:8000/api/auth/register/', userData);
       console.log('Registration successful:', response.data);
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
+      if (response.data.user) {
+        // Show success message
+        alert('Registration successful! Please login.');
+        navigate('/login');
       }
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Registration error:', error.response?.data);
-      setError(error.response?.data?.message || error.message);
+    } catch (err) {
+      if (err.response) {
+        // Handle specific error messages from backend
+        const errorMessage = err.response.data.message;
+        if (errorMessage) {
+          setError(errorMessage);
+        } else if (err.response.data.errors) {
+          // Handle validation errors
+          const errors = err.response.data.errors;
+          if (errors.email) {
+            setError(errors.email[0]);
+          } else if (errors.username) {
+            setError(errors.username[0]);
+          } else {
+            setError("Registration failed. Please try again.");
+          }
+        }
+      } else if (err.request) {
+        setError("Unable to connect to server. Please check your internet connection.");
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }

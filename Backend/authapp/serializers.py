@@ -20,28 +20,52 @@ class UserRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True)
 
-    def validate_email(self, value):
-        if User.objects.filter(email=value).count() > 0:
-            raise serializers.ValidationError("A user with that email already exists.")
-        return value
+    def validate(self, data):
+        # Check if email exists
+        if User.objects.filter(email=data['email']).first():
+            raise serializers.ValidationError({
+                "message": "A user with this email already exists. Please login instead."
+            })
+        
+        # Check if username exists
+        if User.objects.filter(username=data['username']).first():
+            raise serializers.ValidationError({
+                "message": "This username is already taken. Please choose another."
+            })
+        
+        return data
 
     def create(self, validated_data):
         user = User(
             username=validated_data['username'],
             email=validated_data['email'],
-            password=validated_data['password']
+            password=validated_data['password']  # In production, use make_password here
         )
         user.save()
         return user
 
 class UserLoginSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=True)
+    login = serializers.CharField(required=True)  # This will accept either email or username
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        user = User.objects.filter(email=data['email']).first()
-        if user is None or user.password != data['password']:
-            raise serializers.ValidationError("Invalid email or password.")
+        login = data['login']
+        password = data['password']
+        
+        # Try to find user by email or username
+        user = User.objects.filter(email=login).first() or User.objects.filter(username=login).first()
+        
+        if user is None:
+            raise serializers.ValidationError({
+                "message": "No account found with this email/username. Please register first."
+            })
+            
+        if user.password != password:  # In production, use check_password
+            raise serializers.ValidationError({
+                "message": "Invalid password."
+            })
+            
+        data['user'] = user
         return data
 
 class GoogleAuthSerializer(serializers.Serializer):
