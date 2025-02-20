@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from mongoengine import connect
+from django.contrib.auth.hashers import make_password, check_password
 
 # Load environment variables from .env file
 load_dotenv()
@@ -145,9 +146,8 @@ REST_FRAMEWORK = {
     ],
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Your frontend URL
-]
+# Allow all origins (for development purposes only)
+CORS_ALLOW_ALL_ORIGINS = True  # Change this in production to specific origins
 
 
 # Firebase credentials
