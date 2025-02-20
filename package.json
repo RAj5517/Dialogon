@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
+    "@googleapis/calendar": "^9.7.9",
+    "@react-oauth/google": "^0.12.1",
+    "axios": "^1.7.9",
+    "react-modal": "^3.16.3",
+    "react-router-dom": "^7.2.0"
+  }
+}
