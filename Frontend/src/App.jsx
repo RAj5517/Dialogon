@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Auth from './pages/Auth/Auth';
-import './styles/index.css';
+import './index.css';
 
-function App() {
+export default function App() {
   return (
     <Router>
       <Routes>
@@ -12,5 +12,3 @@ function App() {
     </Router>
   );
 }
-
-export default App;
