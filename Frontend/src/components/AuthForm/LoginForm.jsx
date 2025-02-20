@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Input } from '../ui/Input';
 import { api } from '../../utils/api';
-import './AuthForm.css';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -40,22 +39,22 @@ const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="auth-form">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && (
         <motion.div 
-          className="error-message"
+          className="flex items-center gap-2 bg-red-500/10 text-red-500 px-4 py-3 rounded-lg mb-6 text-sm border border-red-500/20"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="error-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0">
             <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
           {error}
         </motion.div>
       )}
 
-      <div className="form-group">
-        <label>Email</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-gray-400 text-sm font-medium">Email</label>
         <Input
           type="email"
           name="email"
@@ -67,8 +66,8 @@ const LoginForm = () => {
         />
       </div>
 
-      <div className="form-group">
-        <label>Password</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-gray-400 text-sm font-medium">Password</label>
         <Input
           type="password"
           name="password"
@@ -82,7 +81,7 @@ const LoginForm = () => {
 
       <motion.button 
         type="submit" 
-        className="submit-btn"
+        className="mt-4 bg-neutral-700 text-neutral-200 py-3.5 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed"
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
         disabled={loading}
