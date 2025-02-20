@@ -1,5 +1,17 @@
 from rest_framework import serializers
 from .models import User  # Import your mongoengine User model
+import os
+from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, auth
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Initialize Firebase Admin SDK
+if not firebase_admin._apps:
+    cred = credentials.Certificate(os.getenv('FIREBASE_CREDENTIALS_JSON'))
+    firebase_admin.initialize_app(cred)
 
 class UserRegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
@@ -29,3 +41,14 @@ class UserLoginSerializer(serializers.Serializer):
         if user is None or user.password != data['password']:
             raise serializers.ValidationError("Invalid email or password.")
         return data
+
+class GoogleAuthSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True)
+    
+    def validate_token(self, token):
+        try:
+            # Verify the token with Firebase
+            decoded_token = auth.verify_id_token(token)
+            return decoded_token
+        except Exception as e:
+            raise serializers.ValidationError('Invalid token: ' + str(e))

@@ -32,12 +32,13 @@ class CustomUser(Document):
         return self.email
 
 class User(Document):
-    username = StringField(max_length=150, unique=True)
-    email = EmailField(unique=True)
-    password = StringField()
-    is_active = BooleanField(default=True)
+    username = StringField(max_length=150, required=True)
+    email = EmailField(required=True, unique=True)
+    password = StringField(required=True)  # In production, use proper password hashing
 
-    meta = {'collection': 'users'}
+    meta = {
+        'collection': 'users'
+    }
 
     def __str__(self):
         return self.email
