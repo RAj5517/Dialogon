@@ -1,0 +1,23 @@
+# React and React DOM
+react@^18.2.0
+react-dom@^18.2.0
+
+# React Router for routing
+react-router-dom@^6.14.0
+
+# Animation library
+framer-motion@^10.0.0
+
+# PropTypes for type checking
+prop-types@^15.8.1
+
+# Vite for development server and build tool
+vite@^4.0.0
+
+# CSS Preprocessor (optional, if you're using SCSS or similar)
+sass@^1.62.0
+
+# Axios for making HTTP requests (optional, if you prefer it over fetch)
+axios@^1.4.0
+
+# Other dependencies as needed 
