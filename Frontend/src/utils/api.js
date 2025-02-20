@@ -1,0 +1,59 @@
+const API_BASE_URL = 'http://localhost:8000/api';
+
+export const api = {
+  // Auth endpoints
+  login: async (credentials) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // For handling cookies
+        body: JSON.stringify(credentials)
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      throw new Error('Network error. Please try again.');
+    }
+  },
+
+  register: async (userData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      throw new Error('Network error. Please try again.');
+    }
+  },
+
+  logout: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/logout/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      throw new Error('Logout failed. Please try again.');
+    }
+  }
+};
+
+// Helper function to handle API responses
+const handleResponse = async (response) => {
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || 'Something went wrong');
+  }
+  return data;
+};
