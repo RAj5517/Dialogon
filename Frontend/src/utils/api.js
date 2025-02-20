@@ -1,18 +1,13 @@
+import axios from 'axios';
+
 const API_BASE_URL = 'http://localhost:8000/api';
 
 export const api = {
   // Auth endpoints
   login: async (credentials) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // For handling cookies
-        body: JSON.stringify(credentials)
-      });
-      return await handleResponse(response);
+      const response = await axios.post(`${API_BASE_URL}/auth/login/`, credentials);
+      return response.data;
     } catch (error) {
       throw new Error('Network error. Please try again.');
     }
@@ -20,14 +15,8 @@ export const api = {
 
   register: async (userData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData)
-      });
-      return await handleResponse(response);
+      const response = await axios.post(`${API_BASE_URL}/auth/register/`, userData);
+      return response.data;
     } catch (error) {
       throw new Error('Network error. Please try again.');
     }
@@ -35,14 +24,12 @@ export const api = {
 
   logout: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/logout/`, {
-        method: 'POST',
-        credentials: 'include',
+      const response = await axios.post(`${API_BASE_URL}/auth/logout/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      return await handleResponse(response);
+      return response.data;
     } catch (error) {
       throw new Error('Logout failed. Please try again.');
     }
