@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Input } from '../ui/Input';
 import { api } from '../../utils/api';
+import axios from 'axios';
 
 const SignupForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    username: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,18 +27,22 @@ const SignupForm = () => {
 
     setLoading(true);
 
+    const userData = {
+      username: formData.username,
+      email: formData.email,
+      password: formData.password
+    };
+
     try {
-      const data = await api.register({
-        email: formData.email,
-        password: formData.password
-      });
-      
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      const response = await axios.post('http://localhost:8000/api/auth/register/', userData);
+      console.log('Registration successful:', response.data);
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
       }
       navigate('/dashboard');
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      console.error('Registration error:', error.response?.data);
+      setError(error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
@@ -63,6 +69,19 @@ const SignupForm = () => {
           {error}
         </motion.div>
       )}
+
+      <div className="flex flex-col gap-2">
+        <label className="text-gray-400 text-sm font-medium">Username</label>
+        <Input
+          type="text"
+          name="username"
+          placeholder="Enter your username"
+          value={formData.username}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+      </div>
 
       <div className="flex flex-col gap-2">
         <label className="text-gray-400 text-sm font-medium">Email</label>
