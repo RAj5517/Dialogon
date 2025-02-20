@@ -13,6 +13,8 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(os.getenv('FIREBASE_CREDENTIALS_JSON'))
     firebase_admin.initialize_app(cred)
 
+print(os.getenv('FIREBASE_CREDENTIALS_JSON'))  # Check if the path is correct
+
 class UserRegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField(required=True)
