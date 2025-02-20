@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -48,9 +48,10 @@ const Dashboard = () => {
     setError('');
 
     try {
+      const adjustedDate = new Date(eventData.date.getTime() - eventData.date.getTimezoneOffset() * 60000);
       const eventPayload = {
         title: eventData.title,
-        date: eventData.date.toISOString().split('T')[0],
+        date: adjustedDate.toISOString().split('T')[0],
         time: eventData.time,
         meeting_link: eventData.meetingLink,
         user_id: localStorage.getItem('userId')
@@ -162,7 +163,6 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Calendar Section */}
           <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-gray-700/50">
             <h2 className="text-2xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
               Calendar
@@ -249,22 +249,43 @@ const Dashboard = () => {
               `}
             </style>
             <Calendar 
-              onChange={setDate} 
+              onChange={(newDate) => {
+                const adjustedDate = new Date(newDate.getTime() - newDate.getTimezoneOffset() * 60000);
+                setDate(adjustedDate);
+                if (!showEventModal) {
+                  setEventData(prev => ({
+                    ...prev,
+                    date: adjustedDate
+                  }));
+                  setShowEventModal(true);
+                } else {
+                  setEventData(prev => ({
+                    ...prev,
+                    date: adjustedDate
+                  }));
+                }
+              }}
               value={date}
-              className="w-full bg-gray-900 text-gray-100 border border-gray-700 rounded-lg"
-              tileClassName="hover:bg-gray-800 rounded-lg text-center p-2"
-              navigationLabel={({ date, label }) => (
-                <span className="text-blue-400 text-lg">
+              className="w-full bg-transparent text-gray-100"
+              tileClassName="hover:bg-indigo-500/10 rounded-lg text-center p-2"
+              navigationLabel={({ date }) => (
+                <span className="text-indigo-400 text-lg">
                   {date.toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </span>
               )}
-              prevLabel={<span className="text-blue-400 text-xl">&lt;</span>}
-              nextLabel={<span className="text-blue-400 text-xl">&gt;</span>}
+              prevLabel={<span className="text-indigo-400 text-xl">&lt;</span>}
+              nextLabel={<span className="text-indigo-400 text-xl">&gt;</span>}
               showNeighboringMonth={false}
             />
             <button
-              onClick={() => setShowEventModal(true)}
-              className="mt-6 w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-blue-600/20"
+              onClick={() => {
+                setEventData(prev => ({
+                  ...prev,
+                  date: date
+                }));
+                setShowEventModal(true);
+              }}
+              className="mt-6 w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-6 py-3 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-indigo-500/20 border border-white/5"
             >
               Add Event
             </button>
@@ -448,18 +469,40 @@ const Dashboard = () => {
       {/* Event Modal */}
       {showEventModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800/90 rounded-2xl p-8 w-full max-w-md border border-gray-700/50 shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+          <div className="bg-indigo-950/90 rounded-2xl p-8 w-full max-w-md border border-white/5 shadow-2xl">
+            <h2 className="text-2xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
               {isEditing ? 'Edit Event' : 'Create New Event'}
             </h2>
             <form onSubmit={handleEventSubmit} className="space-y-6">
+              {error && (
+                <div className="text-red-400 text-sm mb-4">
+                  {error}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-300">Title</label>
                 <input
                   type="text"
-                  className="w-full bg-gray-700/50 rounded-xl px-4 py-3 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
+                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
                   value={eventData.title}
                   onChange={(e) => setEventData({...eventData, title: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-300">Date</label>
+                <input
+                  type="date"
+                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
+                  value={eventData.date.toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    const newDate = new Date(e.target.value);
+                    setEventData(prev => ({
+                      ...prev,
+                      date: newDate
+                    }));
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
                   required
                 />
               </div>
@@ -467,7 +510,7 @@ const Dashboard = () => {
                 <label className="block text-sm font-medium mb-2 text-gray-300">Time</label>
                 <input
                   type="time"
-                  className="w-full bg-gray-700/50 rounded-xl px-4 py-3 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
+                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
                   value={eventData.time}
                   onChange={(e) => setEventData({...eventData, time: e.target.value})}
                   required
@@ -477,26 +520,17 @@ const Dashboard = () => {
                 <label className="block text-sm font-medium mb-2 text-gray-300">Meeting Link</label>
                 <input
                   type="url"
-                  className="w-full bg-gray-700/50 rounded-xl px-4 py-3 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
+                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
                   value={eventData.meetingLink}
                   onChange={(e) => setEventData({...eventData, meetingLink: e.target.value})}
+                  placeholder="https://meet.google.com/..."
                   required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">Video Upload</label>
-                <button
-                  type="button"
-                  className="w-full bg-gray-700/50 text-gray-400 rounded-xl px-4 py-3 border border-gray-600 cursor-not-allowed"
-                  disabled
-                >
-                  Upload Video (Coming Soon)
-                </button>
               </div>
               <div className="flex gap-4 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-blue-600/20"
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-6 py-3 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-indigo-500/20 border border-white/5"
                   disabled={loading}
                 >
                   {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Event'}
@@ -504,7 +538,7 @@ const Dashboard = () => {
                 <button
                   type="button"
                   onClick={() => setShowEventModal(false)}
-                  className="flex-1 bg-gray-700/50 hover:bg-gray-600/50 px-6 py-3 rounded-xl transition-all duration-200 border border-gray-600 hover:border-gray-500"
+                  className="flex-1 bg-white/5 hover:bg-white/10 px-6 py-3 rounded-xl transition-all duration-200 border border-white/10"
                 >
                   Cancel
                 </button>
