@@ -90,7 +90,7 @@ const LoginForm = () => {
 
       <motion.button 
         type="submit" 
-        className="mt-4 bg-neutral-700 text-neutral-200 py-3.5 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="mt-4 bg-[#463F3A] text-[#F4F3EE] py-3.5 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-[#8A817C] disabled:opacity-50 disabled:cursor-not-allowed"
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
         disabled={loading}
