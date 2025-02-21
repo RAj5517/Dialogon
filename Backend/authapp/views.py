@@ -11,6 +11,7 @@ from django.conf import settings
 from pymongo import MongoClient
 import datetime
 from django.db import models
+from rest_framework.decorators import api_view
 
 # Create your views here.  
 
@@ -144,4 +145,148 @@ class GoogleAuthView(generics.GenericAPIView):
 class UserData(models.Model):
     # Define your fields here
     field_name = models.CharField(max_length=100)
+
+@api_view(['POST'])
+def create_event(request):
+    try:
+        client = MongoClient(settings.DB_URI)
+        db = client.user
+        users = db.users
+
+        email = request.data.get('user_email')
+        event_data = {
+            "title": request.data.get('title'),
+            "date": request.data.get('date'),
+            "time": request.data.get('time'),
+            "meeting_link": request.data.get('meeting_link')
+        }
+
+        print(f"Creating event for user {email}: {event_data}")  # Debug log
+
+        # Update user document by pushing new event to events array
+        result = users.update_one(
+            {"email": email},
+            {"$push": {"events": event_data}}
+        )
+
+        if result.modified_count > 0:
+            # Get updated user document
+            user = users.find_one({"email": email})
+            return Response({
+                'message': 'Event created successfully',
+                'events': user.get('events', [])
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                'message': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        print(f"Error creating event: {str(e)}")  # Debug log
+        return Response({
+            'message': f'Error creating event: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+        client.close()
+
+@api_view(['GET'])
+def get_user_events(request, email):
+    try:
+        client = MongoClient(settings.DB_URI)
+        db = client.user
+        users = db.users
+
+        print(f"Fetching events for user: {email}")  # Debug log
+
+        user = users.find_one({"email": email})
+        if user:
+            events = user.get('events', [])
+            print(f"Found {len(events)} events")  # Debug log
+            return Response({
+                'events': events
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'message': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        print(f"Error fetching events: {str(e)}")  # Debug log
+        return Response({
+            'message': f'Error fetching events: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+        client.close()
+
+@api_view(['PUT', 'DELETE'])
+def manage_event(request, email, event_index):
+    try:
+        client = MongoClient(settings.DB_URI)
+        db = client.user
+        users = db.users
+
+        if request.method == 'PUT':
+            # Update event
+            event_data = {
+                "title": request.data.get('title'),
+                "date": request.data.get('date'),
+                "time": request.data.get('time'),
+                "meeting_link": request.data.get('meeting_link')
+            }
+
+            print(f"Updating event for user {email} at index {event_index}")
+            print(f"New event data: {event_data}")
+
+            # Update the specific event in the array
+            result = users.update_one(
+                {"email": email},
+                {"$set": {f"events.{event_index}": event_data}}
+            )
+
+        elif request.method == 'DELETE':
+            # Delete event
+            # First, get the user document
+            user = users.find_one({"email": email})
+            if not user or 'events' not in user:
+                return Response({
+                    'message': 'User or events not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Get current events array
+            events = user.get('events', [])
+            
+            # Check if index is valid
+            if event_index < 0 or event_index >= len(events):
+                return Response({
+                    'message': 'Invalid event index'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Remove the event at the specified index
+            events.pop(event_index)
+
+            # Update the user document with the new events array
+            result = users.update_one(
+                {"email": email},
+                {"$set": {"events": events}}
+            )
+
+        if result.modified_count > 0:
+            # Get updated user document
+            user = users.find_one({"email": email})
+            return Response({
+                'message': 'Event updated successfully' if request.method == 'PUT' else 'Event deleted successfully',
+                'events': user.get('events', [])
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'message': 'User or event not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        print(f"Error managing event: {str(e)}")
+        return Response({
+            'message': f'Error managing event: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+        client.close()
 
