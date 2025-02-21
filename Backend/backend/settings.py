@@ -15,15 +15,17 @@ import os
 from dotenv import load_dotenv
 from mongoengine import connect
 from django.contrib.auth.hashers import make_password, check_password
+import firebase_admin
+from firebase_admin import credentials
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Get the MongoDB URI from the environment variable
-db_uri = os.getenv('DB_URI')
+DB_URI = os.getenv('DB_URI')
 
 # Connect to MongoDB using mongoengine
-connect(host=db_uri)
+connect(host=DB_URI)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -157,3 +159,7 @@ FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID')
 FIREBASE_STORAGE_BUCKET = os.getenv('FIREBASE_STORAGE_BUCKET')
 FIREBASE_MESSAGING_SENDER_ID = os.getenv('FIREBASE_MESSAGING_SENDER_ID')
 FIREBASE_APP_ID = os.getenv('FIREBASE_APP_ID')
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate(os.getenv('FIREBASE_CREDENTIALS_JSON'))
+    firebase_admin.initialize_app(cred)
