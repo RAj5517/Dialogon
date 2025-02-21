@@ -23,7 +23,10 @@ const Dashboard = () => {
 
   // Fetch events when component mounts
   useEffect(() => {
-    fetchEvents();
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user?.email) {
+      fetchEvents(user.email);
+    }
   }, []);
 
   useEffect(() => {
@@ -41,8 +44,8 @@ const Dashboard = () => {
     navigate('/auth');
   };
 
-  const handleEditClick = (event) => {
-    setEditingEvent(event);
+  const handleEditClick = (event, index) => {
+    setEditingEvent({ ...event, index });
     setEventData({
       title: event.title,
       date: new Date(event.date),
@@ -59,33 +62,25 @@ const Dashboard = () => {
     setError('');
 
     try {
+      const user = JSON.parse(localStorage.getItem('user'));
       const adjustedDate = new Date(eventData.date.getTime() - eventData.date.getTimezoneOffset() * 60000);
+      
       const eventPayload = {
         title: eventData.title,
         date: adjustedDate.toISOString().split('T')[0],
         time: eventData.time,
         meeting_link: eventData.meetingLink,
-        user_id: localStorage.getItem('userId')
+        user_email: user.email
       };
 
-      if (isEditing) {
-        // This will be implemented by backend developer
-        // PUT request to /api/events/update/
-        console.log('Event to be updated:', eventPayload);
-        
-        // For now, update the event in local state
-        setEvents(events.map(event => 
-          event === editingEvent ? { ...eventPayload } : event
-        ));
+      let response;
+      if (isEditing && editingEvent !== null) {
+        response = await api.updateEvent(user.email, editingEvent.index, eventPayload);
       } else {
-        // This will be implemented by backend developer
-        // POST request to /api/events/create/
-        console.log('Event to be created:', eventPayload);
-        
-        // For now, add to local state
-        setEvents([...events, eventPayload]);
+        response = await api.createEvent(eventPayload);
       }
 
+      setEvents(response.events);
       setShowEventModal(false);
       setEventData({
         title: '',
@@ -95,6 +90,7 @@ const Dashboard = () => {
       });
       setIsEditing(false);
       setEditingEvent(null);
+      
     } catch (err) {
       console.error('Error saving event:', err);
       setError('Failed to save event');
@@ -103,26 +99,10 @@ const Dashboard = () => {
     }
   };
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (email) => {
     try {
-      // This will be implemented by backend developer
-      // GET request to /api/events/
-      // For now, using mock data matching the MongoDB structure
-      const mockEvents = [
-        {
-          title: "Team Standup",
-          date: "2025-02-22",
-          time: "10:00 AM",
-          meeting_link: "https://zoom.com/meeting123"
-        },
-        {
-          title: "Project Demo",
-          date: "2025-02-23",
-          time: "3:00 PM",
-          meeting_link: "https://meet.google.com/demo123"
-        }
-      ];
-      setEvents(mockEvents);
+      const events = await api.getUserEvents(email);
+      setEvents(events);
     } catch (err) {
       console.error('Error fetching events:', err);
       setError('Failed to load events');
@@ -139,17 +119,20 @@ const Dashboard = () => {
   };
 
   // Add this function to handle event deletion
-  const handleDeleteEvent = (eventToDelete) => {
-    // This will be implemented by backend developer
-    // DELETE request to /api/events/delete/
-    console.log('Event to be deleted:', eventToDelete);
-    
-    // For now, just filter out the event from the local state
-    setEvents(events.filter(event => 
-      event.date !== eventToDelete.date || 
-      event.time !== eventToDelete.time || 
-      event.title !== eventToDelete.title
-    ));
+  const handleDeleteEvent = async (event, index) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (!user?.email) {
+        throw new Error('User not found');
+      }
+
+      const response = await api.deleteEvent(user.email, index);
+      setEvents(response.events);  // Update events with the new list from database
+      
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      setError('Failed to delete event');
+    }
   };
 
   return (
@@ -337,7 +320,7 @@ const Dashboard = () => {
                         </p>
                         <div className="mt-2 flex items-center gap-4">
                           <button
-                            onClick={() => handleEditClick(event)}
+                            onClick={() => handleEditClick(event, index)}
                             className="text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1"
                           >
                             <svg 
@@ -357,7 +340,7 @@ const Dashboard = () => {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDeleteEvent(event)}
+                            onClick={() => handleDeleteEvent(event, index)}
                             className="text-red-400 hover:text-red-300 transition-colors inline-flex items-center gap-1"
                           >
                             <svg 

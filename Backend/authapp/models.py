@@ -40,6 +40,7 @@ class User(models.Model):
     username = models.CharField(max_length=150)
     password = models.CharField(max_length=128, null=True, blank=True)
     auth_type = models.CharField(max_length=20, default='email')
+    events = models.JSONField(default=list)  # Store events as JSON array
 
     class Meta:
         db_table = 'users'
