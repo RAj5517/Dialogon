@@ -1,9 +1,11 @@
 from rest_framework import serializers
-from .models import User  # Import your mongoengine User model
+from .models import User  # Remove UserData from import
 import os
 from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, auth
+from firebase_admin import auth as firebase_auth
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,10 +17,11 @@ if not firebase_admin._apps:
 
 print(os.getenv('FIREBASE_CREDENTIALS_JSON'))  # Check if the path is correct
 
-class UserRegisterSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True)
+class UserRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, data):
         # Check if email exists
@@ -45,11 +48,11 @@ class UserRegisterSerializer(serializers.Serializer):
         return user
 
 class UserLoginSerializer(serializers.Serializer):
-    login = serializers.CharField(required=True)  # This will accept either email or username
-    password = serializers.CharField(write_only=True)
+    email = serializers.EmailField()
+    password = serializers.CharField()
 
     def validate(self, data):
-        login = data['login']
+        login = data['email']
         password = data['password']
         
         # Try to find user by email or username
@@ -71,10 +74,16 @@ class UserLoginSerializer(serializers.Serializer):
 class GoogleAuthSerializer(serializers.Serializer):
     token = serializers.CharField(required=True)
     
-    def validate_token(self, token):
+    def validate(self, data):
         try:
-            # Verify the token with Firebase
-            decoded_token = auth.verify_id_token(token)
-            return decoded_token
+            decoded_token = firebase_auth.verify_id_token(data['token'])
+            data['decoded_token'] = decoded_token
+            return data
         except Exception as e:
-            raise serializers.ValidationError('Invalid token: ' + str(e))
+            print("Token verification error:", str(e))
+            raise serializers.ValidationError(f'Invalid token: {str(e)}')
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'auth_type']

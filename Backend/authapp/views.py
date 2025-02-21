@@ -3,8 +3,14 @@ from rest_framework.response import Response
 from .models import User
 from .serializers import UserRegisterSerializer, UserLoginSerializer, GoogleAuthSerializer
 from rest_framework.authtoken.models import Token
-from firebase_admin import auth
+from firebase_admin import auth as firebase_auth
 from rest_framework import serializers
+from firebase_admin.auth import ExpiredIdTokenError, InvalidIdTokenError
+from django.utils import timezone
+from django.conf import settings
+from pymongo import MongoClient
+import datetime
+from django.db import models
 
 # Create your views here.  
 
@@ -67,28 +73,75 @@ class LoginView(generics.GenericAPIView):
 
 class GoogleAuthView(generics.GenericAPIView):
     serializer_class = GoogleAuthSerializer
-    
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = MongoClient(settings.DB_URI)
+        self.db = self.client.user
+        self.users = self.db.users
+
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        # Get user info from validated token
-        user_data = serializer.validated_data
-        
-        # Check if user exists, if not create new user
-        user, created = User.objects.get_or_create(
-            email=user_data['email'],
-            defaults={'username': user_data.get('name', '')}
-        )
-        
-        # Create or get token
-        token, _ = Token.objects.get_or_create(user=user)
-        
-        return Response({
-            'token': token.key,
-            'user': {
-                'email': user.email,
-                'username': user.username
-            }
-        }, status=status.HTTP_200_OK)
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
+            decoded_token = serializer.validated_data['decoded_token']
+            email = decoded_token.get('email')
+            
+            if not email:
+                return Response({
+                    'message': 'Email not found in token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            username = email.split('@')[0]
+
+            existing_user = self.users.find_one({"email": email})
+
+            if existing_user:
+                self.users.update_one(
+                    {"email": email},
+                    {
+                        "$set": {
+                            "last_login": datetime.datetime.now(),
+                            "auth_type": "google",
+                            "username": username
+                        }
+                    }
+                )
+                user_data = existing_user
+            else:
+                new_user = {
+                    "email": email,
+                    "username": username,
+                    "auth_type": "google",
+                    "created_at": datetime.datetime.now(),
+                    "last_login": datetime.datetime.now()
+                }
+                result = self.users.insert_one(new_user)
+                user_data = new_user
+                print(f"New Google user created with id: {result.inserted_id}")
+
+            return Response({
+                'message': 'Google authentication successful',
+                'user': {
+                    'email': email,
+                    'username': username,
+                    'auth_type': 'google'
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Authentication error: {str(e)}")
+            return Response({
+                'message': 'Authentication failed',
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    def __del__(self):
+        if hasattr(self, 'client'):
+            self.client.close()
+
+class UserData(models.Model):
+    # Define your fields here
+    field_name = models.CharField(max_length=100)
 
