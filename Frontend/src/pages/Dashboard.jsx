@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-// import { eventService } from '../services/api';
+import { api } from '../utils/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -19,10 +19,21 @@ const Dashboard = () => {
   const [events, setEvents] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [userData, setUserData] = useState(null);
 
   // Fetch events when component mounts
   useEffect(() => {
     fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user?.id) {
+      // Fetch user data
+      api.getUserData(user.id)
+        .then(data => setUserData(data))
+        .catch(err => console.error('Error fetching user data:', err));
+    }
   }, []);
 
   const handleLogout = () => {
@@ -545,6 +556,15 @@ const Dashboard = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {userData && (
+        <div>
+          <h2>Welcome {userData.username}</h2>
+          <p>Bio: {userData.user_data?.bio}</p>
+          <p>Last Login: {userData.user_data?.last_login}</p>
+          {/* Add other user data fields */}
         </div>
       )}
     </div>

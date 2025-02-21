@@ -1,5 +1,9 @@
 from mongoengine import Document, StringField, EmailField, BooleanField
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.db import models
+from django.utils import timezone
+from bson import ObjectId
+import datetime
 
 # Create your models here.
 
@@ -31,14 +35,27 @@ class CustomUser(Document):
     def __str__(self):
         return self.email
 
-class User(Document):
-    username = StringField(max_length=150, required=True)
-    email = EmailField(required=True, unique=True)
-    password = StringField(required=True)  # In production, use proper password hashing
+class User(models.Model):
+    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=150)
+    password = models.CharField(max_length=128, null=True, blank=True)
+    auth_type = models.CharField(max_length=20, default='email')
 
-    meta = {
-        'collection': 'users'
-    }
+    class Meta:
+        db_table = 'users'
+        app_label = 'authapp'  # Changed from 'user' to 'authapp'
 
-    def __str__(self):
-        return self.email
+    def to_mongo_dict(self):
+        return {
+            "_id": ObjectId(),
+            "email": self.email,
+            "username": self.email.split('@')[0],  # Create username from email
+            "auth_type": "google",
+            "created_at": datetime.datetime.now(),
+            "last_login": datetime.datetime.now()
+        }
+
+# Remove or comment out the UserData model if you're not using it
+# class UserData(models.Model):
+#     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_data')
+#     last_login = models.DateTimeField(default=timezone.now)
