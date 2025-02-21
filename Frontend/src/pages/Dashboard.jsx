@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { api } from '../utils/api';
+import { BookLoader } from "react-awesome-loaders";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ const Dashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [userData, setUserData] = useState(null);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Fetch events when component mounts
   useEffect(() => {
@@ -100,12 +103,17 @@ const Dashboard = () => {
   };
 
   const fetchEvents = async (email) => {
+    setEventsLoading(true);
     try {
       const events = await api.getUserEvents(email);
       setEvents(events);
     } catch (err) {
       console.error('Error fetching events:', err);
       setError('Failed to load events');
+    } finally {
+      setTimeout(() => {
+        setEventsLoading(false);
+      }, 800); // Add small delay for smooth transition
     }
   };
 
@@ -121,17 +129,17 @@ const Dashboard = () => {
   // Add this function to handle event deletion
   const handleDeleteEvent = async (event, index) => {
     try {
+      setDeleteLoading(true); // Show the BookLoader
       const user = JSON.parse(localStorage.getItem('user'));
-      if (!user?.email) {
-        throw new Error('User not found');
-      }
-
-      const response = await api.deleteEvent(user.email, index);
-      setEvents(response.events);  // Update events with the new list from database
-      
-    } catch (err) {
-      console.error('Error deleting event:', err);
+      await api.deleteEvent(user.email, index);
+      await fetchEvents(user.email);
+    } catch (error) {
+      console.error('Error deleting event:', error);
       setError('Failed to delete event');
+    } finally {
+      setTimeout(() => {
+        setDeleteLoading(false);
+      }, 800);
     }
   };
 
@@ -277,99 +285,115 @@ const Dashboard = () => {
 
           {/* Upcoming Events Section */}
           <div className="bg-neutral-800 shadow-xl rounded-lg border border-white/10">
-            <div className="p-8">
+            <div className="p-8 relative">
               <h2 className="text-2xl font-bold mb-6 text-neutral-200">
                 Upcoming Events
               </h2>
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#8A817C] scrollbar-track-neutral-700 scrollbar-thumb-rounded-full scrollbar-track-rounded-full">
-                {events
-                  .filter(event => {
-                    const eventDateTime = new Date(`${event.date} ${event.time}`);
-                    const now = new Date();
-                    return eventDateTime > now;
-                  })
-                  .sort((a, b) => {
-                    const dateA = new Date(`${a.date} ${a.time}`);
-                    const dateB = new Date(`${b.date} ${b.time}`);
-                    return dateA - dateB;
-                  })
-                  .map((event, index) => (
-                    <div 
-                      key={index} 
-                      className="bg-neutral-700/50 p-6 rounded-lg border border-white/10 hover:border-[#8A817C]/50 transition-all duration-300 group hover:shadow-lg hover:shadow-black/20"
-                    >
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-lg group-hover:text-blue-400 transition-colors truncate">
-                            {event.title}
-                          </h3>
-                          <p className="text-gray-400 mt-2">
-                            {new Date(event.date).toLocaleDateString('en-US', { 
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
-                          </p>
-                          <p className="text-gray-400">
-                            {event.time}
-                          </p>
-                          <div className="mt-2 flex items-center gap-4">
-                            <button
-                              onClick={() => handleEditClick(event, index)}
-                              className="mt-4 bg-neutral-700 text-neutral-200 py-2 px-4 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
-                            >
-                              <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                className="h-4 w-4" 
-                                fill="none" 
-                                viewBox="0 0 24 24" 
-                                stroke="currentColor"
-                              >
-                                <path 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round" 
-                                  strokeWidth={2} 
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" 
-                                />
-                              </svg>
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEvent(event, index)}
-                              className="mt-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-2 px-4 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1 border border-red-500/20"
-                            >
-                              <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                className="h-4 w-4" 
-                                fill="none" 
-                                viewBox="0 0 24 24" 
-                                stroke="currentColor"
-                              >
-                                <path 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round" 
-                                  strokeWidth={2} 
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
-                                />
-                              </svg>
-                              Delete
-                            </button>
+              
+              <div className="min-h-[200px] relative">
+                {(eventsLoading || deleteLoading) ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-800/50 backdrop-blur-sm animate-fadeIn rounded-lg">
+                    <div className="animate-scaleIn">
+                      <BookLoader 
+                        background={"transparent"}
+                        desktopSize={"80px"}
+                        mobileSize={"40px"}
+                        textColor={"#6366F1"}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 animate-fadeIn">
+                    {events
+                      .filter(event => {
+                        const eventDateTime = new Date(`${event.date} ${event.time}`);
+                        const now = new Date();
+                        return eventDateTime > now;
+                      })
+                      .sort((a, b) => {
+                        const dateA = new Date(`${a.date} ${a.time}`);
+                        const dateB = new Date(`${b.date} ${b.time}`);
+                        return dateA - dateB;
+                      })
+                      .map((event, index) => (
+                        <div 
+                          key={index} 
+                          className="bg-neutral-700/50 p-6 rounded-lg border border-white/10 hover:border-[#8A817C]/50 transition-all duration-300 group hover:shadow-lg hover:shadow-black/20"
+                        >
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-lg group-hover:text-blue-400 transition-colors truncate">
+                                {event.title}
+                              </h3>
+                              <p className="text-gray-400 mt-2">
+                                {new Date(event.date).toLocaleDateString('en-US', { 
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                              <p className="text-gray-400">
+                                {event.time}
+                              </p>
+                              <div className="mt-2 flex items-center gap-4">
+                                <button
+                                  onClick={() => handleEditClick(event, index)}
+                                  className="mt-4 bg-neutral-700 text-neutral-200 py-2 px-4 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                                >
+                                  <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    className="h-4 w-4" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                  >
+                                    <path 
+                                      strokeLinecap="round" 
+                                      strokeLinejoin="round" 
+                                      strokeWidth={2} 
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" 
+                                    />
+                                  </svg>
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEvent(event, index)}
+                                  className="mt-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-2 px-4 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1 border border-red-500/20"
+                                >
+                                  <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    className="h-4 w-4" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                  >
+                                    <path 
+                                      strokeLinecap="round" 
+                                      strokeLinejoin="round" 
+                                      strokeWidth={2} 
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                                    />
+                                  </svg>
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                            <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full text-xs whitespace-nowrap">
+                              {new Date(`2000-01-01 ${event.time}`).toLocaleTimeString('en-US', { 
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true 
+                              })}
+                            </span>
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full text-xs whitespace-nowrap">
-                          {new Date(`2000-01-01 ${event.time}`).toLocaleTimeString('en-US', { 
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true 
-                          })}
-                        </span>
+                      ))}
+                    {events.filter(event => new Date(`${event.date} ${event.time}`) > new Date()).length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="text-neutral-400">No upcoming events</div>
                       </div>
-                    </div>
-                  ))}
-                {events.filter(event => new Date(`${event.date} ${event.time}`) > new Date()).length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="text-neutral-400">No upcoming events</div>
+                    )}
                   </div>
                 )}
               </div>
