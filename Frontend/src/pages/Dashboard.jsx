@@ -65,9 +65,20 @@ const Dashboard = () => {
     setError('');
 
     try {
+      // Validate the date
+      const dateToValidate = new Date(eventData.date);
+      if (isNaN(dateToValidate.getTime())) {
+        throw new Error('Invalid date selected');
+      }
+
       const user = JSON.parse(localStorage.getItem('user'));
       const adjustedDate = new Date(eventData.date.getTime() - eventData.date.getTimezoneOffset() * 60000);
       
+      // Additional date validation
+      if (adjustedDate.getMonth() !== eventData.date.getMonth()) {
+        throw new Error('Invalid date for selected month');
+      }
+
       const eventPayload = {
         title: eventData.title,
         date: adjustedDate.toISOString().split('T')[0],
@@ -96,7 +107,7 @@ const Dashboard = () => {
       
     } catch (err) {
       console.error('Error saving event:', err);
-      setError('Failed to save event');
+      setError(err.message || 'Failed to save event');
     } finally {
       setLoading(false);
     }
@@ -140,6 +151,20 @@ const Dashboard = () => {
       setTimeout(() => {
         setDeleteLoading(false);
       }, 800);
+    }
+  };
+
+  // Update the date change handler
+  const handleDateChange = (e) => {
+    const newDate = new Date(e.target.value);
+    if (!isNaN(newDate.getTime())) {
+      setEventData(prev => ({
+        ...prev,
+        date: newDate
+      }));
+      setError('');
+    } else {
+      setError('Invalid date selected');
     }
   };
 
@@ -304,17 +329,12 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 animate-fadeIn">
-                    {events
+                    {sortEventsByDate(events
                       .filter(event => {
                         const eventDateTime = new Date(`${event.date} ${event.time}`);
                         const now = new Date();
                         return eventDateTime > now;
-                      })
-                      .sort((a, b) => {
-                        const dateA = new Date(`${a.date} ${a.time}`);
-                        const dateB = new Date(`${b.date} ${b.time}`);
-                        return dateA - dateB;
-                      })
+                      }))
                       .map((event, index) => (
                         <div 
                           key={index} 
@@ -478,13 +498,7 @@ const Dashboard = () => {
                   type="date"
                   className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
                   value={eventData.date.toISOString().split('T')[0]}
-                  onChange={(e) => {
-                    const newDate = new Date(e.target.value);
-                    setEventData(prev => ({
-                      ...prev,
-                      date: newDate
-                    }));
-                  }}
+                  onChange={handleDateChange}
                   min={new Date().toISOString().split('T')[0]}
                   required
                 />
