@@ -65,10 +65,12 @@ const Dashboard = () => {
     setError('');
 
     try {
-      // Validate the date
-      const dateToValidate = new Date(eventData.date);
-      if (isNaN(dateToValidate.getTime())) {
-        throw new Error('Invalid date selected');
+      // Validate the date and time
+      const eventDateTime = new Date(`${eventData.date.toISOString().split('T')[0]} ${eventData.time}`);
+      const now = new Date();
+      
+      if (eventDateTime < now) {
+        throw new Error('Cannot create events in the past');
       }
 
       const user = JSON.parse(localStorage.getItem('user'));
