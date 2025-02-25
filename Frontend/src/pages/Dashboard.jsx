@@ -522,7 +522,7 @@ const Dashboard = () => {
                   className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
                   value={eventData.meetingLink}
                   onChange={(e) => setEventData({...eventData, meetingLink: e.target.value})}
-                  placeholder="https://meet.google.com/..."
+                  placeholder="Meeting Link"
                   required
                 />
               </div>
