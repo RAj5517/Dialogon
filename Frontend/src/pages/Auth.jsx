@@ -151,7 +151,7 @@ const Auth = () => {
               </button>
             </div>
 
-            {isLogin ? <LoginForm /> : <SignupForm />}
+            {isLogin ? <LoginForm onLogin={handleLogin} /> : <SignupForm />}
 
             {error && (
               <div className="mt-4 text-red-500 text-sm text-center">

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Input } from '../ui/Input';
-import { api } from '../../utils/api';
+// import { api } from '../../utils/api';
 import axios from 'axios';
 
 const SignupForm = () => {
