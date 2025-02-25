@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Input } from '../ui/Input';
-import axios from 'axios';
+// import { api } from '../../utils/api';
+import PropTypes from 'prop-types';
 
-const LoginForm = () => {
-  const navigate = useNavigate();
+const LoginForm = ({ onLogin }) => {
   const [formData, setFormData] = useState({
     login: '',
     password: ''
@@ -19,18 +18,11 @@ const LoginForm = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/auth/login/', formData);
-      if (response.data.user) {
-        // Store user data in localStorage or context if needed
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/dashboard');
-      }
+      await onLogin(formData);
     } catch (err) {
       if (err.response) {
-        // Server responded with error
         setError(err.response.data.message || "An error occurred during login");
       } else if (err.request) {
-        // Network error
         setError("Unable to connect to server. Please check your internet connection.");
       } else {
         setError("An unexpected error occurred");
@@ -99,6 +91,10 @@ const LoginForm = () => {
       </motion.button>
     </form>
   );
+};
+
+LoginForm.propTypes = {
+  onLogin: PropTypes.func.isRequired
 };
 
 export default LoginForm;
