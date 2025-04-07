@@ -1,6 +1,5 @@
 #cleanup the audio after transcription from google cloud storage
 
-
 import os
 import sys
 import wave
@@ -15,7 +14,7 @@ def upload_to_gcs(bucket_name, source_file, destination_blob_name):
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_filename(source_file)
-    print(f"✅ Uploaded to gs://{bucket_name}/{destination_blob_name}")
+    print(f" Uploaded to gs://{bucket_name}/{destination_blob_name}")
 
 
 def analyze_and_prepare_audio(file_path):
@@ -43,7 +42,7 @@ def transcribe_audio(file_path: str):
     
     file_path, sample_rate = analyze_and_prepare_audio(file_path)
     
-    bucket_name = "dialogon_audio_bucket"
+    bucket_name = "dialogon-audio-bucket"
     destination_blob_name = os.path.basename(file_path)
     
     upload_to_gcs(bucket_name, file_path, destination_blob_name)
@@ -69,14 +68,14 @@ def transcribe_audio(file_path: str):
     response = operation.result(timeout=300)
     
     print("\n Transcription:")
-    for result in operation.results:
-        print("X", result.alternatives[0].transcript)
+    for result in response.results:
+        print(result.alternatives[0].transcript)
+
         
 
-# if __name__ == "__main__":
-#     if len(sys.argv) < 2:
-#         print("Usage: python stt.py <audio_file.wav>")
-#     else:
-#         transcribe_audio(sys.argv[1])
-        
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python stt.py <audio_file.wav>")
+    else:
+        transcribe_audio(sys.argv[1])
         
