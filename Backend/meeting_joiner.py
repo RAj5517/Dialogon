@@ -11,6 +11,8 @@ import random
 import argparse
 import logging
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -22,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger('meeting_joiner')
 
 # Default paths
-chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+chrome_path = os.getenv("CHROME_EXE")
 user_data_dir = r'C:\Dialogon\users\\' + str(random.randint(10000, 99999))
 
 def parse_arguments():
@@ -86,7 +88,7 @@ def join_meeting(meet_link, user_name):
         while True:
             try: 
                 for button in driver.find_elements(By.TAG_NAME, 'button'):
-                    if button.text == 'Join now':
+                    if button.text in ['Join now', 'Ask to join']:
                         tmp = button
                         tmp.click()
                         break

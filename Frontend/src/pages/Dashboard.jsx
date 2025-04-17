@@ -178,15 +178,17 @@ const Dashboard = () => {
   const handleManualJoin = async (meetingLink) => {
     try {
       setLoading(true);
+      console.log('Sending request to join meeting:', meetingLink); // Debug log
       const response = await axios.post('http://localhost:8000/api/auth/manual-join/', {
         meeting_link: meetingLink,
         user_name: 'Dialogon Assistant'
       });
       
-      alert('Meeting assistant launched successfully!');
+      console.log('Server response:', response.data); // Debug log
+      alert(response.data.message || 'Meeting assistant launched successfully!');
     } catch (error) {
-      console.error('Error launching meeting assistant:', error);
-      alert('Failed to launch meeting assistant. Please try again.');
+      console.error('Error launching meeting assistant:', error.response?.data || error);
+      alert(error.response?.data?.message || 'Failed to launch meeting assistant. Please try again.');
     } finally {
       setLoading(false);
     }
