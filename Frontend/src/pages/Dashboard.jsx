@@ -5,6 +5,7 @@ import 'react-calendar/dist/Calendar.css';
 import { api } from '../utils/api';
 import { BookLoader } from "react-awesome-loaders";
 import axios from 'axios';
+import FancyButton from '../components/ui/FancyButton/FancyButton';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -224,12 +225,12 @@ const Dashboard = () => {
 
       {/* Add Manual Join Button */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <button
+        <FancyButton
           onClick={() => setShowManualJoinModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          className="bg-blue-600"
         >
           Join Meeting Manually
-        </button>
+        </FancyButton>
       </div>
 
       {/* Manual Join Modal */}
