@@ -42,7 +42,7 @@ def manual_join_meeting(request):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
         # Check if Chrome exists
-        chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+        chrome_path = r'C:\Users\sayan\AppData\Local\Google\Chrome\Application\chrome.exe'
         if not os.path.exists(chrome_path):
             logger.error(f"Chrome not found at: {chrome_path}")
             return Response({

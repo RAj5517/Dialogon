@@ -8,3 +8,6 @@ python-dotenv
 mongoengine
 djangorestframework
 django-cors-headers
+firebase-admin
+selenium
+webdriver-manager

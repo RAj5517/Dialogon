@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger('meeting_joiner')
 
 # Default paths
-chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+chrome_path = r'C:\Users\sayan\AppData\Local\Google\Chrome\Application\chrome.exe'
 user_data_dir = r'C:\Dialogon\users\\' + str(random.randint(10000, 99999))
 
 def parse_arguments():
