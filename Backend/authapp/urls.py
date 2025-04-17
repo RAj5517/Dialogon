@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import RegisterView, LoginView, GoogleAuthView
 from . import views
+from .manual_join import manual_join_meeting
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -9,4 +10,5 @@ urlpatterns = [
     path('events/create/', views.create_event, name='create_event'),
     path('events/<str:email>/', views.get_user_events, name='get_user_events'),
     path('events/<str:email>/<int:event_index>/', views.manage_event, name='manage_event'),
+    path('manual-join/', manual_join_meeting, name='manual_join_meeting'),
 ]

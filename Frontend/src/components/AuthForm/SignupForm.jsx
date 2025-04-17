@@ -34,14 +34,21 @@ const SignupForm = () => {
     };
 
     try {
+      console.log('Sending registration data:', userData);
       const response = await axios.post('http://localhost:8000/api/auth/register/', userData);
-      console.log('Registration successful:', response.data);
+      console.log('Registration response:', response.data);
       if (response.data.user) {
         // Show success message
         alert('Registration successful! Please login.');
         navigate('/login');
       }
     } catch (err) {
+      console.error('Registration error:', {
+        response: err.response?.data,
+        status: err.response?.status,
+        message: err.message
+      });
+      
       if (err.response) {
         // Handle specific error messages from backend
         const errorMessage = err.response.data.message;
@@ -61,7 +68,7 @@ const SignupForm = () => {
       } else if (err.request) {
         setError("Unable to connect to server. Please check your internet connection.");
       } else {
-        setError("An unexpected error occurred");
+        setError("An unexpected error occurred: " + err.message);
       }
     } finally {
       setLoading(false);
