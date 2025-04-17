@@ -30,5 +30,5 @@ response = model.generate_content(prompt)
 
 #print the result
 print("Summary:\n")
-print(response.text.strip())
+print(response.text)
 
