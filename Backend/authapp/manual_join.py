@@ -6,6 +6,8 @@ import os
 import sys
 import logging
 import time
+from dotenv import load_dotenv
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -42,7 +44,7 @@ def manual_join_meeting(request):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
         # Check if Chrome exists
-        chrome_path = r'C:\Users\sayan\AppData\Local\Google\Chrome\Application\chrome.exe'
+        chrome_path = os.getenv("CHROME_EXE")
         if not os.path.exists(chrome_path):
             logger.error(f"Chrome not found at: {chrome_path}")
             return Response({
