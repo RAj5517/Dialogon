@@ -66,13 +66,12 @@ def transcribe_audio(file_path: str):
     
     print("Transcription in progress...")
     response = operation.result(timeout=300)
-
-    transcript = ""
+    
+    print("\n Transcription:")
     for result in response.results:
-        transcript += result.alternatives[0].transcript + " "
+        print(result.alternatives[0].transcript)
 
-    return transcript.strip()
-
+        
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
