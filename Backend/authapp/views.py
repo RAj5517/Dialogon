@@ -21,8 +21,10 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         try:
+            print(f"Registration attempt with data: {request.data}")  # Debug log
             serializer.is_valid(raise_exception=True)
             user = serializer.save()
+            print(f"User created successfully: {user.email}")  # Debug log
             return Response({
                 "message": "Registration successful",
                 "user": {
@@ -31,16 +33,16 @@ class RegisterView(generics.CreateAPIView):
                 }
             }, status=status.HTTP_201_CREATED)
         except serializers.ValidationError as e:
-            # Get the error message
+            print(f"Validation error during registration: {e.detail}")  # Debug log
             error_message = e.detail.get('message', 'Registration failed')
             if isinstance(error_message, list):
                 error_message = error_message[0]
-                
             return Response({
                 "message": error_message,
                 "errors": e.detail
             }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(f"Unexpected error during registration: {str(e)}")  # Debug log
             return Response({
                 "message": "An unexpected error occurred",
                 "errors": str(e)
@@ -158,7 +160,8 @@ def create_event(request):
             "title": request.data.get('title'),
             "date": request.data.get('date'),
             "time": request.data.get('time'),
-            "meeting_link": request.data.get('meeting_link')
+            "meeting_link": request.data.get('meeting_link'),
+            "status": "scheduled"  # Add status field
         }
 
         print(f"Creating event for user {email}: {event_data}")  # Debug log
@@ -226,12 +229,20 @@ def manage_event(request, email, event_index):
         users = db.users
 
         if request.method == 'PUT':
+            # Get current event to preserve status if it exists
+            user = users.find_one({"email": email})
+            current_status = "scheduled"
+            
+            if user and 'events' in user and len(user['events']) > event_index:
+                current_status = user['events'][event_index].get('status', 'scheduled')
+            
             # Update event
             event_data = {
                 "title": request.data.get('title'),
                 "date": request.data.get('date'),
                 "time": request.data.get('time'),
-                "meeting_link": request.data.get('meeting_link')
+                "meeting_link": request.data.get('meeting_link'),
+                "status": current_status  # Preserve existing status
             }
 
             print(f"Updating event for user {email} at index {event_index}")

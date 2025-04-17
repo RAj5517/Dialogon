@@ -6,6 +6,7 @@ import firebase_admin
 from firebase_admin import credentials, auth
 from firebase_admin import auth as firebase_auth
 import time
+from django.contrib.auth.hashers import make_password, check_password
 
 # Load environment variables from .env file
 load_dotenv()
@@ -39,13 +40,20 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        user = User(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password']  # In production, use make_password here
-        )
-        user.save()
-        return user
+        try:
+            user = User(
+                username=validated_data['username'],
+                email=validated_data['email']
+            )
+            # Use the set_password method we defined in the model
+            user.set_password(validated_data['password'])
+            user.save()
+            return user
+        except Exception as e:
+            print(f"Registration error: {str(e)}")  # Add this for debugging
+            raise serializers.ValidationError({
+                "message": f"Registration failed: {str(e)}"
+            })
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -63,7 +71,7 @@ class UserLoginSerializer(serializers.Serializer):
                 "message": "No account found with this email/username. Please register first."
             })
             
-        if user.password != password:  # In production, use check_password
+        if not user.check_password(password):  # This is correct - using hashed password check
             raise serializers.ValidationError({
                 "message": "Invalid password."
             })

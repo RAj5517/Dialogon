@@ -108,6 +108,17 @@ export const api = {
       throw error;
     }
   },
+
+  // Add method for manual meeting joining
+  manualJoinMeeting: async (meetingData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/manual-join/`, meetingData);
+      return response.data;
+    } catch (error) {
+      console.error('Error launching meeting joiner:', error);
+      throw error;
+    }
+  },
 };
 
 // Helper function to handle API responses
