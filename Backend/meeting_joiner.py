@@ -10,7 +10,13 @@ import subprocess
 import random
 import argparse
 import logging
-from record_meet import record_meet
+try:
+    from record_meet import record_meet, start_recording
+    RECORDING_AVAILABLE = True
+except ImportError:
+    RECORDING_AVAILABLE = False
+    def start_recording():
+        logger.warning("Recording functionality not available. Missing required modules.")
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -24,9 +30,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger('meeting_joiner')
 
-# Default paths
-chrome_path = os.getenv("CHROME_EXE")
-user_data_dir = r'C:\Dialogon\users\\' + str(random.randint(10000, 99999))
+def get_chrome_path():
+    """Get the Chrome executable path"""
+    # First try from environment variable
+    chrome_path = os.getenv("CHROME_EXE")
+    if chrome_path and os.path.exists(chrome_path):
+        return chrome_path
+        
+    # Common Chrome locations
+    possible_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+            
+    return None
 
 def parse_arguments():
     """Parse command line arguments"""
@@ -41,11 +63,20 @@ def join_meeting(meet_link, user_name):
     try:
         logger.info(f"Joining meeting: {meet_link} as {user_name}")
         
+        # Get Chrome path
+        chrome_path = get_chrome_path()
+        if not chrome_path:
+            logger.error("Chrome not found in any standard location")
+            return False
+            
+        logger.info(f"Using Chrome at: {chrome_path}")
+        
         # Make sure user data directory exists
-        os.makedirs(os.path.dirname(user_data_dir), exist_ok=True)
+        user_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'chrome_user_data')
+        os.makedirs(user_data_dir, exist_ok=True)
         
         # Launch Chrome
-        command = [chrome_path, '--remote-debugging-port=9222', '--user-data-dir=' + user_data_dir]
+        command = [chrome_path, '--remote-debugging-port=9222', f'--user-data-dir={user_data_dir}']
         subprocess.Popen(command)
         
         # Set up Chrome options
@@ -100,13 +131,25 @@ def join_meeting(meet_link, user_name):
         
         logger.info("Successfully joined the meeting")
 
-        record_meet()
+        # Try to start recording, but don't fail if it doesn't work
+        if RECORDING_AVAILABLE:
+            try:
+                start_recording()
+                logger.info("Started recording")
+            except Exception as e:
+                logger.error(f"Failed to start recording: {str(e)}")
+        else:
+            logger.warning("Recording is disabled due to missing dependencies")
         
-        # # Keep the meeting open for a set duration (e.g., 1 hour)
-        # time.sleep(3600)
+        # Keep the browser open
+        while True:
+            time.sleep(60)  # Check every minute
+            try:
+                # Check if we're still in the meeting
+                driver.current_url
+            except:
+                break
         
-        driver.quit()
-        logger.info("Meeting ended")
         return True
         
     except Exception as e:
