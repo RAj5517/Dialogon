@@ -6,9 +6,15 @@ export const api = {
   // Auth endpoints
   login: async (credentials) => {
     try {
+      console.log('Sending login request:', credentials);  // Debug log
       const response = await axios.post(`${API_BASE_URL}/auth/login/`, credentials);
+      console.log('Login response:', response.data);  // Debug log
       return response.data;
     } catch (error) {
+      console.error('Login error:', error.response?.data || error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
       throw new Error('Network error. Please try again.');
     }
   },
