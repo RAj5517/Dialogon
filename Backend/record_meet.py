@@ -1,6 +1,5 @@
 import soundcard as sc
 import numpy as np
-from scipy.io.wavfile import write
 import datetime
 from threading import Thread
 import time
@@ -35,9 +34,19 @@ def record_meet():
     Thread(target=wait).start()
     print(f"Loopback recording from: {default_speaker.name}")
     print("Press Ctrl+C to stop recording.\n")
-
     try:
-        with loopback_mic.recorder(samplerate=samplerate, channels=channels) as recorder:
+        # Create Recordings directory if it doesn't exist
+        os.makedirs("Recordings", exist_ok=True)
+        
+        filename = rf"Recordings/system_audio_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+        
+        # Get default speakers
+        speakers = sc.default_speaker()
+        if not speakers:
+            raise Exception("No default speakers found")
+        
+        # Record audio
+        with speakers.recorder(samplerate=48000) as mic:
             while True:
                 data = recorder.record(numframes=1024)
                 frames.append(data)
