@@ -4,8 +4,9 @@ import { motion } from 'framer-motion';
 import { Input } from '../ui/Input';
 // import { api } from '../../utils/api';
 import axios from 'axios';
+import PropTypes from 'prop-types';
 
-const SignupForm = () => {
+const SignupForm = ({ onSuccess }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
@@ -40,7 +41,9 @@ const SignupForm = () => {
       if (response.data.user) {
         // Show success message
         alert('Registration successful! Please login.');
-        navigate('/login');
+        if (onSuccess) {
+          onSuccess(); // This will switch to the login form
+        }
       }
     } catch (err) {
       console.error('Registration error:', {
@@ -160,6 +163,10 @@ const SignupForm = () => {
       </motion.button>
     </form>
   );
+};
+
+SignupForm.propTypes = {
+  onSuccess: PropTypes.func
 };
 
 export default SignupForm;
