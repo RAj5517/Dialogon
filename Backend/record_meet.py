@@ -18,6 +18,8 @@ def save_recording(frames):
     write(filename, samplerate, audio_data)
     print(f"✅ Saved to: {filename}")
 
+    return filename
+
 def record_meet():
     print(f"🎧 Loopback recording from: {default_speaker.name}")
     print("🔴 Press Ctrl+C to stop recording.\n")
