@@ -134,7 +134,10 @@ def join_meeting(meet_link, user_name):
 
         sound_file_path = record_meet()
 
-        print("Summary:\n", summarize_meet(sound_file_path))
+        logger.info(sound_file_path)
+
+        with open("final_summ.txt", 'w+') as f:
+            f.write("Summary:\n" + summarize_meet(sound_file_path))
         
         # # Keep the meeting open for a set duration (e.g., 1 hour)
         # time.sleep(3600)
