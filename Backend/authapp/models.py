@@ -36,21 +36,24 @@ class CustomUser(Document):
     def __str__(self):
         return self.email
 
-class User(models.Model):
-    email = models.EmailField(unique=True)
-    username = models.CharField(max_length=150)
-    password = models.CharField(max_length=128, null=True, blank=True)
-    auth_type = models.CharField(max_length=20, default='email')
-    events = models.JSONField(default=list)  # Store events as JSON array
-
-    class Meta:
-        db_table = 'users'
-        app_label = 'authapp'  # Changed from 'user' to 'authapp'
+class User:
+    """
+    A simple class to represent user data structure.
+    This is not a Django model since we're using MongoDB.
+    """
+    def __init__(self, email, username, password=None, auth_type='email'):
+        self.email = email
+        self.username = username
+        self.password = password
+        self.auth_type = auth_type
 
     def set_password(self, raw_password):
-        self.password = make_password(raw_password)
+        if raw_password:
+            self.password = make_password(raw_password)
         
     def check_password(self, raw_password):
+        if not raw_password or not self.password:
+            return False
         return check_password(raw_password, self.password)
 
     def to_mongo_dict(self):
