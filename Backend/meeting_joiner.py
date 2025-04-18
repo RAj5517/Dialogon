@@ -10,6 +10,7 @@ import subprocess
 import random
 import argparse
 import logging
+from record_meet import record_meet
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -98,9 +99,11 @@ def join_meeting(meet_link, user_name):
                 time.sleep(0.5)
         
         logger.info("Successfully joined the meeting")
+
+        record_meet()
         
-        # Keep the meeting open for a set duration (e.g., 1 hour)
-        time.sleep(3600)
+        # # Keep the meeting open for a set duration (e.g., 1 hour)
+        # time.sleep(3600)
         
         driver.quit()
         logger.info("Meeting ended")
