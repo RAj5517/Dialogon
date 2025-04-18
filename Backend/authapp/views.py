@@ -19,19 +19,29 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegisterSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
         try:
             print(f"Registration attempt with data: {request.data}")  # Debug log
+            
+            # Initialize MongoDB connection
+            client = MongoClient(settings.DB_URI)
+            db = client.user
+            users = db.users
+            
+            serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            user = serializer.save()
-            print(f"User created successfully: {user.email}")  # Debug log
+            
+            # Create user using the serializer
+            user_data = serializer.save()
+            
             return Response({
                 "message": "Registration successful",
                 "user": {
-                    "username": user.username,
-                    "email": user.email
+                    "username": user_data['username'],
+                    "email": user_data['email'],
+                    "auth_type": user_data['auth_type']
                 }
             }, status=status.HTTP_201_CREATED)
+            
         except serializers.ValidationError as e:
             print(f"Validation error during registration: {e.detail}")  # Debug log
             error_message = e.detail.get('message', 'Registration failed')
@@ -47,28 +57,41 @@ class RegisterView(generics.CreateAPIView):
                 "message": "An unexpected error occurred",
                 "errors": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        finally:
+            if 'client' in locals():
+                client.close()
 
 class LoginView(generics.GenericAPIView):
     serializer_class = UserLoginSerializer
 
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
         try:
+            print(f"Login attempt with data: {request.data}")  # Debug log
+            serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = serializer.validated_data['user']
+            
+            # Generate a simple token (you might want to use JWT or another token system)
+            token = user['_id'].__str__()
+            
             return Response({
                 "message": "Login successful!",
+                "token": token,  # Add token to response
                 "user": {
-                    "email": user.email,
-                    "username": user.username
+                    "email": user['email'],
+                    "username": user['username'],
+                    "auth_type": user.get('auth_type', 'email')
                 }
             }, status=status.HTTP_200_OK)
+            
         except serializers.ValidationError as e:
+            print(f"Validation error during login: {e.detail}")  # Debug log
             return Response({
                 "message": e.detail.get('message', 'Login failed'),
                 "errors": e.detail
             }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(f"Unexpected error during login: {str(e)}")  # Debug log
             return Response({
                 "message": "An unexpected error occurred",
                 "errors": str(e)

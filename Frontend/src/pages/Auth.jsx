@@ -88,21 +88,35 @@ const Auth = () => {
 
   const handleLogin = async (credentials) => {
     try {
+      console.log('Attempting login with:', credentials);  // Debug log
       const response = await api.login(credentials);
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      console.log('Login response:', response);  // Debug log
+      
+      if (response.user) {  // Changed from response.token to response.user
+        // Store user data
         localStorage.setItem('user', JSON.stringify(response.user));
+        if (response.token) {
+          localStorage.setItem('token', response.token);
+        }
         
         // Enhanced transition sequence
         setIsNavigating(true);
         // Wait for animations to complete
         await new Promise(resolve => setTimeout(resolve, 2800));
         navigate('/dashboard');
+      } else {
+        setError('Login failed: Invalid response from server');
       }
     } catch (error) {
       console.error('Login error:', error);
+      setError(error.message || 'An error occurred during login');
       setIsNavigating(false);
     }
+  };
+
+  // Add this function to handle registration success
+  const handleRegistrationSuccess = () => {
+    setIsLogin(true); // Switch to login form
   };
 
   // Debug log for render
@@ -151,7 +165,7 @@ const Auth = () => {
               </button>
             </div>
 
-            {isLogin ? <LoginForm onLogin={handleLogin} /> : <SignupForm />}
+            {isLogin ? <LoginForm onLogin={handleLogin} /> : <SignupForm onSuccess={handleRegistrationSuccess} />}
 
             {error && (
               <div className="mt-4 text-red-500 text-sm text-center">
