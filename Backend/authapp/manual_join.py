@@ -7,7 +7,7 @@ import sys
 import logging
 import time
 from dotenv import load_dotenv
-load_dotenv()
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -18,8 +18,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger('manual_join')
 
+# Load environment variables from the correct location
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENV_PATH = os.path.join(BACKEND_DIR, '.env')
+load_dotenv(ENV_PATH)
+
 # Path to your meeting joiner script
-MEETING_JOINER_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'meeting_joiner.py')
+MEETING_JOINER_PATH = os.path.join(BACKEND_DIR, 'meeting_joiner.py')
+
+def get_chrome_path():
+    """Get the Chrome executable path"""
+    # First try from environment variable
+    chrome_path = os.getenv("CHROME_EXE")
+    if chrome_path and os.path.exists(chrome_path):
+        return chrome_path
+        
+    # Common Chrome locations
+    possible_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+            
+    return None
 
 @api_view(['POST'])
 def manual_join_meeting(request):
@@ -40,24 +65,33 @@ def manual_join_meeting(request):
         if not os.path.exists(MEETING_JOINER_PATH):
             logger.error(f"meeting_joiner.py not found at: {MEETING_JOINER_PATH}")
             return Response({
-                'message': 'Meeting joiner script not found'
+                'message': f'Meeting joiner script not found at {MEETING_JOINER_PATH}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-        # Check if Chrome exists
-        chrome_path = os.getenv("CHROME_EXE")
-        if not os.path.exists(chrome_path):
-            logger.error(f"Chrome not found at: {chrome_path}")
+        # Get Chrome path
+        chrome_path = get_chrome_path()
+        if not chrome_path:
+            logger.error("Chrome not found in any standard location")
             return Response({
-                'message': 'Chrome browser not found'
+                'message': 'Chrome browser not found. Please install Google Chrome.'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        logger.info(f"Found Chrome at: {chrome_path}")
             
         # Create user data directory if it doesn't exist
-        user_data_dir = r'C:\Dialogon\users'
+        user_data_dir = os.path.join(BACKEND_DIR, 'chrome_user_data')
         os.makedirs(user_data_dir, exist_ok=True)
+        
+        # Set environment variables for the subprocess
+        env = os.environ.copy()
+        env['CHROME_EXE'] = chrome_path
+        
+        logger.info(f"Using Python interpreter: {sys.executable}")
+        logger.info(f"Using Chrome path: {chrome_path}")
         
         # Prepare command to run the meeting joiner script
         command = [
-            sys.executable,  # Python interpreter
+            sys.executable,
             MEETING_JOINER_PATH,
             '--link', meeting_link,
             '--name', user_name
@@ -66,15 +100,19 @@ def manual_join_meeting(request):
         logger.info(f"Launching command: {' '.join(command)}")
         
         # Launch the meeting joiner in a separate process
-        process = subprocess.Popen(command, 
-                                 stdout=subprocess.PIPE, 
-                                 stderr=subprocess.PIPE)
+        process = subprocess.Popen(
+            command, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            env=env,
+            cwd=BACKEND_DIR
+        )
         
         # Wait a bit and check if process is still running
         time.sleep(2)
         if process.poll() is not None:
             stdout, stderr = process.communicate()
-            logger.error(f"Process failed. stdout: {stdout}, stderr: {stderr}")
+            logger.error(f"Process failed. stdout: {stdout.decode()}, stderr: {stderr.decode()}")
             return Response({
                 'message': f'Meeting joiner failed to start: {stderr.decode()}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
