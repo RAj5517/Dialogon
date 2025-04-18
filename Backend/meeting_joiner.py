@@ -11,6 +11,7 @@ import random
 import argparse
 import logging
 from record_meet import record_meet
+from summarize_meet import summarize_meet
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -100,7 +101,9 @@ def join_meeting(meet_link, user_name):
         
         logger.info("Successfully joined the meeting")
 
-        record_meet()
+        sound_file_path = record_meet()
+
+        print("Summary:\n", summarize_meet(sound_file_path))
         
         # # Keep the meeting open for a set duration (e.g., 1 hour)
         # time.sleep(3600)
