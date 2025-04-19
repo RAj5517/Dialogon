@@ -17,6 +17,8 @@ except ImportError:
     RECORDING_AVAILABLE = False
     def start_recording():
         logger.warning("Recording functionality not available. Missing required modules.")
+        
+from summarize_meet import summarize_meet
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -131,15 +133,12 @@ def join_meeting(meet_link, user_name):
         
         logger.info("Successfully joined the meeting")
 
-        # Try to start recording, but don't fail if it doesn't work
-        if RECORDING_AVAILABLE:
-            try:
-                start_recording()
-                logger.info("Started recording")
-            except Exception as e:
-                logger.error(f"Failed to start recording: {str(e)}")
-        else:
-            logger.warning("Recording is disabled due to missing dependencies")
+        sound_file_path = record_meet()
+
+        logger.info(sound_file_path)
+
+        with open("final_summ.txt", 'w+') as f:
+            f.write("Summary:\n" + summarize_meet(sound_file_path))
         
         # Keep the browser open
         while True:
