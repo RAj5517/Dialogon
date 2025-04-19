@@ -2,7 +2,7 @@
     position: relative;
     padding: 10px 20px;
     border-radius: 7px;
-    border: 1px solid rgb(61, 106, 255);
+    border: 1px solid rgb(124, 58, 237);
     font-size: 14px;
     text-transform: uppercase;
     font-weight: 600;
@@ -16,8 +16,8 @@
   }
   
   .fancy-button:hover {
-    background: rgb(61, 106, 255);
-    box-shadow: 0 0 30px 5px rgba(0, 142, 236, 0.815);
+    background: rgb(124, 58, 237);
+    box-shadow: 0 0 30px 5px rgba(124, 58, 237, 0.7);
     transition: all 0.2s ease-out;
   }
   

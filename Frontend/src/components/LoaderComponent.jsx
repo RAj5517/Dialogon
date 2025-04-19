@@ -4,7 +4,7 @@ export const LoaderComponent = () => {
   console.log('Loader component rendered'); // Debug log
   
   return (
-    <div className="fixed inset-0 flex items-center justify-center min-h-screen bg-neutral-900/85 z-50 animate-fadeIn">
+    <div className="fixed inset-0 flex items-center justify-center min-h-screen bg-black/85 z-50 animate-fadeIn">
       <div className="animate-scaleIn">
         <div className="animate-float">
           <BoxesLoader

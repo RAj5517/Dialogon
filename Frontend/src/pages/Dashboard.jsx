@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -27,6 +27,35 @@ const Dashboard = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [manualJoinLink, setManualJoinLink] = useState('');
   const [showManualJoinModal, setShowManualJoinModal] = useState(false);
+  
+  // Notification system
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+  const notificationTimeoutRef = useRef(null);
+
+  // Show notification function
+  const showNotification = (message, type = 'success') => {
+    // Clear any existing timeout
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
+    
+    // Set the notification
+    setNotification({ show: true, message, type });
+    
+    // Set a timeout to hide the notification
+    notificationTimeoutRef.current = setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Fetch events when component mounts
   useEffect(() => {
@@ -96,8 +125,10 @@ const Dashboard = () => {
       let response;
       if (isEditing && editingEvent !== null) {
         response = await api.updateEvent(user.email, editingEvent.index, eventPayload);
+        showNotification(`Event "${eventData.title}" updated successfully`, 'success');
       } else {
         response = await api.createEvent(eventPayload);
+        showNotification(`Event "${eventData.title}" created successfully`, 'success');
       }
 
       setEvents(response.events);
@@ -114,6 +145,7 @@ const Dashboard = () => {
     } catch (err) {
       console.error('Error saving event:', err);
       setError(err.message || 'Failed to save event');
+      showNotification(err.message || 'Failed to save event', 'error');
     } finally {
       setLoading(false);
     }
@@ -127,6 +159,7 @@ const Dashboard = () => {
     } catch (err) {
       console.error('Error fetching events:', err);
       setError('Failed to load events');
+      showNotification('Failed to load events', 'error');
     } finally {
       setTimeout(() => {
         setEventsLoading(false);
@@ -150,9 +183,11 @@ const Dashboard = () => {
       const user = JSON.parse(localStorage.getItem('user'));
       await api.deleteEvent(user.email, index);
       await fetchEvents(user.email);
+      showNotification(`Event "${event.title}" deleted successfully`, 'success');
     } catch (error) {
       console.error('Error deleting event:', error);
       setError('Failed to delete event');
+      showNotification('Failed to delete event', 'error');
     } finally {
       setTimeout(() => {
         setDeleteLoading(false);
@@ -185,10 +220,10 @@ const Dashboard = () => {
       });
       
       console.log('Server response:', response.data); // Debug log
-      alert(response.data.message || 'Meeting assistant launched successfully!');
+      showNotification(response.data.message || 'Meeting assistant launched successfully!', 'success');
     } catch (error) {
       console.error('Error launching meeting assistant:', error.response?.data || error);
-      alert(error.response?.data?.message || 'Failed to launch meeting assistant. Please try again.');
+      showNotification(error.response?.data?.message || 'Failed to launch meeting assistant. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -198,7 +233,7 @@ const Dashboard = () => {
   const handleManualJoinSubmit = async (e) => {
     e.preventDefault();
     if (!manualJoinLink) {
-      alert('Please enter a meeting link');
+      showNotification('Please enter a meeting link', 'warning');
       return;
     }
     await handleManualJoin(manualJoinLink);
@@ -206,8 +241,118 @@ const Dashboard = () => {
     setManualJoinLink('');
   };
 
+  // Reset event data function
+  const resetEventData = () => {
+    setEventData({
+      title: '',
+      date: new Date(),
+      time: '',
+      meetingLink: '',
+    });
+    setIsEditing(false);
+    setEditingEvent(null);
+    setError('');
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setShowEventModal(false);
+    setDate(null);
+    resetEventData();
+  };
+
+  // Handle Add Event button click
+  const handleAddEventClick = () => {
+    setEventData(prev => ({ ...prev, date: date || new Date() }));
+    setShowEventModal(true);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-800 text-neutral-200">
+    <div className="min-h-screen bg-black bg-grid-small-black/[0.1] dark:bg-grid-small-white/[0.1] text-neutral-200">
+      {/* Notification Component */}
+      {notification.show && (
+        <div 
+          className={`fixed top-20 right-4 z-50 p-4 rounded-lg shadow-lg animate-slideInRight ${
+            notification.type === 'success' ? 'bg-green-500/20 border border-green-500/20 text-green-400' :
+            notification.type === 'error' ? 'bg-red-500/20 border border-red-500/20 text-red-400' :
+            'bg-yellow-500/20 border border-yellow-500/20 text-yellow-400'
+          }`}
+        >
+          <div className="flex items-center">
+            {notification.type === 'success' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            ) : notification.type === 'error' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            )}
+            <p>{notification.message}</p>
+            <button 
+              onClick={() => setNotification({ ...notification, show: false })}
+              className="ml-4 text-current hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add css for animations */}
+      <style>
+        {`
+          @keyframes slideInRight {
+            0% {
+              opacity: 0;
+              transform: translateX(100px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+          .animate-slideInRight {
+            animation: slideInRight 0.3s ease-out forwards;
+          }
+
+          @keyframes scaleIn {
+            0% {
+              opacity: 0;
+              transform: scale(0.95) translateY(-10px);
+            }
+            60% {
+              transform: scale(1.02);
+            }
+            100% {
+              opacity: 1;
+              transform: scale(1) translateY(0);
+            }
+          }
+          .animate-scaleIn {
+            animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+
+          @keyframes fadeIn {
+            0% {
+              opacity: 0;
+            }
+            100% {
+              opacity: 1;
+            }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out forwards;
+          }
+        `}
+      </style>
+
       {/* Navbar */}
       <nav className="bg-neutral-800/50 backdrop-blur-sm border-b border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -231,18 +376,23 @@ const Dashboard = () => {
           onClick={() => setShowManualJoinModal(true)}
           className="bg-blue-600"
         >
-          Join Meeting Manually
+          Launch Agent Manually
         </FancyButton>
       </div>
 
       {/* Manual Join Modal */}
       {showManualJoinModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-neutral-800 p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Join Meeting Manually</h2>
+          <div className="bg-neutral-900/95 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-neutral-700/50 backdrop-blur-xl ring-1 ring-white/10 animate-scaleIn">
+            <h2 className="text-2xl font-bold mb-6 text-neutral-200 flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+              </svg>
+              Join Meeting Manually
+            </h2>
             <form onSubmit={handleManualJoinSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2 text-neutral-400">
                   Meeting Link
                 </label>
                 <input
@@ -250,7 +400,7 @@ const Dashboard = () => {
                   value={manualJoinLink}
                   onChange={(e) => setManualJoinLink(e.target.value)}
                   placeholder="Enter meeting link"
-                  className="w-full px-3 py-2 bg-neutral-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full px-4 py-3 bg-neutral-800/50 rounded-xl border border-neutral-700/50 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all duration-200 placeholder-neutral-500"
                   required
                 />
               </div>
@@ -258,15 +408,19 @@ const Dashboard = () => {
                 <button
                   type="button"
                   onClick={() => setShowManualJoinModal(false)}
-                  className="px-4 py-2 text-neutral-400 hover:text-neutral-200 transition-colors"
+                  className="px-4 py-2.5 bg-red-500/20 text-red-400 rounded-xl font-medium transition-all duration-200 hover:bg-red-500/30 border border-red-500/20"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="px-4 py-2.5 bg-indigo-500/20 text-indigo-400 rounded-xl font-medium transition-all duration-200 hover:bg-indigo-500/30 border border-indigo-500/20 flex items-center gap-2"
                   disabled={loading}
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   {loading ? 'Launching...' : 'Launch Assistant'}
                 </button>
               </div>
@@ -278,7 +432,7 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="bg-neutral-800 shadow-xl rounded-lg border border-white/10">
+          <div className="bg-neutral-900 shadow-xl rounded-lg border border-neutral-800">
             <div className="p-8">
               <h2 className="text-2xl font-bold mb-6 text-neutral-200">
                 Calendar
@@ -289,9 +443,10 @@ const Dashboard = () => {
                     background: transparent !important;
                     border: none !important;
                     font-family: inherit !important;
+                    width: 100% !important;
                   }
                   .react-calendar__tile {
-                    color: #e5e7eb !important;
+                    color: #94a3b8 !important;
                     padding: 1em 0.5em !important;
                     position: relative !important;
                     border-radius: 0.75rem !important;
@@ -299,52 +454,45 @@ const Dashboard = () => {
                   }
                   .react-calendar__tile:enabled:hover,
                   .react-calendar__tile:enabled:focus {
-                    background: rgba(138, 129, 124, 0.2) !important;
-                    color: #ffffff !important;
+                    background: rgba(99, 102, 241, 0.1) !important;
+                    color: #818cf8 !important;
                     transform: translateY(-2px) !important;
-                    box-shadow: 0 4px 12px rgba(138, 129, 124, 0.2) !important;
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1) !important;
                   }
                   .react-calendar__tile--now {
-                    background: rgba(138, 129, 124, 0.1) !important;
-                    border: 1px solid rgba(138, 129, 124, 0.3) !important;
+                    background: rgba(99, 102, 241, 0.1) !important;
+                    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+                    color: #818cf8 !important;
                   }
                   .react-calendar__tile--active {
-                    background: #8A817C !important;
-                    color: white !important;
+                    background: rgba(99, 102, 241, 0.2) !important;
+                    color: #818cf8 !important;
                     border-radius: 0.75rem !important;
+                    border: 1px solid rgba(99, 102, 241, 0.3) !important;
                   }
                   .react-calendar__tile--active:enabled:hover,
                   .react-calendar__tile--active:enabled:focus {
-                    background: #8A817C !important;
+                    background: rgba(99, 102, 241, 0.3) !important;
                     transform: translateY(-2px) !important;
-                    box-shadow: 0 4px 12px rgba(138, 129, 124, 0.3) !important;
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
+                  }
+                  .react-calendar__navigation button {
+                    color: #94a3b8 !important;
+                    min-width: 44px !important;
+                    background: none !important;
+                    font-family: inherit !important;
+                    padding: 0.5rem !important;
+                    border-radius: 0.75rem !important;
+                    transition: all 0.2s ease-in-out !important;
                   }
                   .react-calendar__navigation button:enabled:hover,
                   .react-calendar__navigation button:enabled:focus {
-                    background-color: rgba(138, 129, 124, 0.2) !important;
+                    background-color: rgba(99, 102, 241, 0.1) !important;
+                    color: #818cf8 !important;
                     transform: translateY(-1px) !important;
                   }
-                  .react-calendar__year-view__months__month {
-                    padding: 0.75em 0.5em !important;
-                    width: auto !important;
-                    flex-basis: 25% !important;
-                  }
-                  .react-calendar__month-view__days__day--weekend {
-                    color: #E07A5F !important;
-                  }
-                  .react-calendar__month-view__days__day--weekend:enabled:hover,
-                  .react-calendar__month-view__days__day--weekend:enabled:focus {
-                    background: rgba(224, 122, 95, 0.2) !important;
-                    color: #E07A5F !important;
-                    transform: translateY(-2px) !important;
-                    box-shadow: 0 4px 12px rgba(224, 122, 95, 0.2) !important;
-                  }
-                  .react-calendar__navigation button[disabled] {
-                    opacity: 0.5 !important;
-                    background-color: transparent !important;
-                  }
                   .react-calendar__month-view__weekdays__weekday {
-                    color: #9ca3af !important;
+                    color: #64748b !important;
                     font-weight: 500 !important;
                     padding: 0.5rem !important;
                     text-decoration: none !important;
@@ -352,6 +500,28 @@ const Dashboard = () => {
                   .react-calendar__month-view__weekdays__weekday abbr {
                     text-decoration: none !important;
                     font-weight: 500 !important;
+                  }
+                  .react-calendar__month-view__days__day--weekend {
+                    color: #f87171 !important;
+                  }
+                  .react-calendar__month-view__days__day--weekend:enabled:hover,
+                  .react-calendar__month-view__days__day--weekend:enabled:focus {
+                    background: rgba(248, 113, 113, 0.1) !important;
+                    color: #f87171 !important;
+                    transform: translateY(-2px) !important;
+                    box-shadow: 0 4px 12px rgba(248, 113, 113, 0.1) !important;
+                  }
+                  .react-calendar__navigation button[disabled] {
+                    opacity: 0.3 !important;
+                    cursor: not-allowed !important;
+                  }
+                  .react-calendar__tile:disabled {
+                    opacity: 0.3 !important;
+                    cursor: not-allowed !important;
+                    background: transparent !important;
+                  }
+                  .react-calendar__month-view__days__day--neighboringMonth {
+                    color: #475569 !important;
                   }
                 `}
               </style>
@@ -372,7 +542,7 @@ const Dashboard = () => {
                     }));
                   }
                 }}
-                value={date}
+                value={showEventModal ? date : null}
                 className="w-full bg-transparent text-gray-100"
                 tileClassName="hover:bg-indigo-500/10 rounded-lg text-center p-2"
                 navigationLabel={({ date }) => (
@@ -385,19 +555,19 @@ const Dashboard = () => {
                 showNeighboringMonth={false}
               />
               <button
-                onClick={() => {
-                  setEventData(prev => ({ ...prev, date: date }));
-                  setShowEventModal(true);
-                }}
-                className="mt-4 bg-neutral-700 text-neutral-200 py-3.5 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                onClick={handleAddEventClick}
+                className="mt-4 bg-indigo-500/20 text-indigo-400 py-3.5 rounded-xl text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed w-full border border-indigo-500/20 flex items-center justify-center gap-2"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
                 Add Event
               </button>
             </div>
           </div>
 
           {/* Upcoming Events Section */}
-          <div className="bg-neutral-800 shadow-xl rounded-lg border border-white/10">
+          <div className="bg-neutral-900 shadow-xl rounded-lg border border-neutral-800">
             <div className="p-8 relative">
               <h2 className="text-2xl font-bold mb-6 text-neutral-200">
                 Upcoming Events
@@ -405,7 +575,7 @@ const Dashboard = () => {
               
               <div className="min-h-[200px] relative">
                 {(eventsLoading || deleteLoading) ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-800/50 backdrop-blur-sm animate-fadeIn rounded-lg">
+                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/70 backdrop-blur-sm animate-fadeIn rounded-lg">
                     <div className="animate-scaleIn">
                       <BookLoader 
                         background={"transparent"}
@@ -426,7 +596,7 @@ const Dashboard = () => {
                       .map((event, index) => (
                         <div 
                           key={index} 
-                          className="bg-neutral-700/50 p-6 rounded-lg border border-white/10 hover:border-[#8A817C]/50 transition-all duration-300 group hover:shadow-lg hover:shadow-black/20"
+                          className="bg-neutral-800 p-6 rounded-lg border border-neutral-700 hover:border-neutral-600 transition-all duration-300 group hover:shadow-lg hover:shadow-black/20"
                         >
                           <div className="flex justify-between items-start gap-4">
                             <div className="flex-1 min-w-0">
@@ -459,21 +629,29 @@ const Dashboard = () => {
                               </div>
                               
                               <div className="mt-3 flex gap-2">
+                                {/* Join Meeting Button */}
                                 <a 
                                   href={event.meeting_link} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="text-blue-400 hover:text-blue-300 transition-colors px-3 py-1 border border-blue-400/30 rounded-md text-sm"
+                                  className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl hover:bg-blue-500/20 hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
                                 >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
                                   Join Meeting
                                 </a>
                                 
-                                {/* Add manual join button */}
+                                {/* Launch Assistant Button */}
                                 <button
                                   onClick={() => handleManualJoin(event.meeting_link)}
-                                  className="text-green-400 hover:text-green-300 transition-colors px-3 py-1 border border-green-400/30 rounded-md text-sm"
+                                  className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl hover:bg-indigo-500/20 hover:border-indigo-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={loading}
                                 >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
                                   Launch Assistant
                                 </button>
                               </div>
@@ -543,13 +721,13 @@ const Dashboard = () => {
           </div>
 
           {/* Completed Events Section */}
-          <div className="bg-neutral-800 shadow-xl rounded-lg border border-white/10">
+          <div className="bg-neutral-900 shadow-xl rounded-lg border border-neutral-800">
             <div className="p-8 relative h-full">
               <h2 className="text-2xl font-bold mb-6 text-neutral-200">
                 Completed Events
               </h2>
               {/* Coming Soon Overlay */}
-              <div className="absolute inset-0 top-0 left-0 right-0 bottom-0 bg-neutral-900/80 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10">
+              <div className="absolute inset-0 top-0 left-0 right-0 bottom-0 bg-neutral-900/90 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10">
                 <div className="text-2xl font-bold mb-2 text-neutral-200">
                   Coming Soon
                 </div>
@@ -559,7 +737,7 @@ const Dashboard = () => {
               </div>
               {/* Placeholder Content */}
               <div className="space-y-4 opacity-30 min-h-[300px]">
-                <div className="bg-neutral-700/50 p-6 rounded-lg border border-white/10">
+                <div className="bg-neutral-800 p-6 rounded-lg border border-neutral-700">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-semibold text-lg text-neutral-200">
@@ -593,32 +771,35 @@ const Dashboard = () => {
 
       {/* Event Modal */}
       {showEventModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-800 rounded-lg p-8 w-full max-w-md border border-white/10">
-            <h2 className="text-2xl font-bold mb-6 text-neutral-200">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-neutral-900/95 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-neutral-700/50 backdrop-blur-xl ring-1 ring-white/10 animate-scaleIn">
+            <h2 className="text-2xl font-bold mb-6 text-neutral-200 flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               {isEditing ? 'Edit Event' : 'Create New Event'}
             </h2>
             <form onSubmit={handleEventSubmit} className="space-y-6">
               {error && (
-                <div className="text-red-400 text-sm mb-4">
+                <div className="text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm">
                   {error}
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">Title</label>
+                <label className="block text-sm font-medium mb-2 text-neutral-400">Title</label>
                 <input
                   type="text"
-                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-neutral-800/50 rounded-xl border border-neutral-700/50 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all duration-200 placeholder-neutral-500"
                   value={eventData.title}
                   onChange={(e) => setEventData({...eventData, title: e.target.value})}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">Date</label>
+                <label className="block text-sm font-medium mb-2 text-neutral-400">Date</label>
                 <input
                   type="date"
-                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-neutral-800/50 rounded-xl border border-neutral-700/50 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all duration-200 placeholder-neutral-500"
                   value={eventData.date.toISOString().split('T')[0]}
                   onChange={handleDateChange}
                   min={new Date().toISOString().split('T')[0]}
@@ -626,40 +807,43 @@ const Dashboard = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">Time</label>
+                <label className="block text-sm font-medium mb-2 text-neutral-400">Time</label>
                 <input
                   type="time"
-                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-neutral-800/50 rounded-xl border border-neutral-700/50 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all duration-200 placeholder-neutral-500"
                   value={eventData.time}
                   onChange={(e) => setEventData({...eventData, time: e.target.value})}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">Meeting Link</label>
+                <label className="block text-sm font-medium mb-2 text-neutral-400">Meeting Link</label>
                 <input
                   type="url"
-                  className="w-full bg-white/5 rounded-xl px-4 py-3 border border-white/10 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-neutral-800/50 rounded-xl border border-neutral-700/50 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all duration-200 placeholder-neutral-500"
                   value={eventData.meetingLink}
                   onChange={(e) => setEventData({...eventData, meetingLink: e.target.value})}
-                  placeholder="Meeting Link"
+                  placeholder="Enter meeting link"
                   required
                 />
               </div>
-              <div className="flex gap-4 pt-2">
-                <button
-                  type="submit"
-                  className="mt-4 bg-neutral-700 text-neutral-200 py-3.5 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed flex-1"
-                  disabled={loading}
-                >
-                  {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Event'}
-                </button>
+              <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowEventModal(false)}
-                  className="mt-4 bg-neutral-700 text-neutral-200 py-3.5 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+                  onClick={handleModalClose}
+                  className="px-4 py-2.5 bg-red-500/20 text-red-400 rounded-xl font-medium transition-all duration-200 hover:bg-red-500/30 border border-red-500/20"
                 >
                   Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 bg-indigo-500/20 text-indigo-400 rounded-xl font-medium transition-all duration-200 hover:bg-indigo-500/30 border border-indigo-500/20 flex items-center gap-2"
+                  disabled={loading}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Event'}
                 </button>
               </div>
             </form>
