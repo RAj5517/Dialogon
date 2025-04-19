@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import LoginForm from '../components/AuthForm/LoginForm';
 import SignupForm from '../components/AuthForm/SignupForm';
+import { BackgroundBeams } from '../components/ui/background-beams';
+import { BackgroundGradient } from '../components/ui/background-gradient';
 import { auth, provider } from '../utils/firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { api } from '../utils/api';
@@ -132,61 +134,71 @@ const Auth = () => {
             : 'opacity-100 scale-100 blur-0'
         }`}
       >
-        <div className="min-h-screen flex items-center justify-center bg-neutral-900 p-4">
-          <motion.div 
-            className="w-full max-w-md bg-neutral-800 p-8 rounded-2xl shadow-xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+        <div className="min-h-screen flex items-center justify-center bg-black/[0.96] p-4 relative overflow-hidden bg-grid-white/[0.1] bg-dot-white">
+          <BackgroundBeams className="opacity-70" />
+          <BackgroundGradient 
+            className="rounded-3xl p-[1px] backdrop-blur-sm" 
+            containerClassName="w-full max-w-md z-10"
           >
-            <div className="text-center mb-8">
-              <h1 className="text-[#e0e0e0] text-2xl font-bold mb-2">Meeting Assistant</h1>
-              <p className="text-[#888] text-sm">Manage your meetings efficiently</p>
-            </div>
-
-            <div className="flex mb-8 bg-[#2a2a2a] p-1 rounded-lg gap-1">
-              <button 
-                className={`flex-1 py-3 px-3 rounded-md text-sm transition-all duration-300 
-                ${isLogin 
-                  ? 'bg-[#404040] text-[#e0e0e0]' 
-                  : 'text-[#888] hover:bg-[#333] hover:text-[#aaa]'}`}
-                onClick={() => setIsLogin(true)}
-              >
-                Login
-              </button>
-              <button 
-                className={`flex-1 py-3 px-3 rounded-md text-sm transition-all duration-300 
-                ${!isLogin 
-                  ? 'bg-[#404040] text-[#e0e0e0]' 
-                  : 'text-[#888] hover:bg-[#333] hover:text-[#aaa]'}`}
-                onClick={() => setIsLogin(false)}
-              >
-                Sign Up
-              </button>
-            </div>
-
-            {isLogin ? <LoginForm onLogin={handleLogin} /> : <SignupForm onSuccess={handleRegistrationSuccess} />}
-
-            {error && (
-              <div className="mt-4 text-red-500 text-sm text-center">
-                {error}
+            <motion.div 
+              className="w-full bg-[rgba(24,24,27,0.95)] p-8 rounded-2xl shadow-xl relative z-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center mb-8">
+                <h1 className="text-white text-2xl font-bold mb-2">DIALOGON</h1>
+                <p className="text-gray-400 text-sm">Meet Smarter, Work Faster.</p>
               </div>
-            )}
 
-            <div className="mt-6">
-              <button 
-                onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center gap-2 bg-white text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <img 
-                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                  alt="Google" 
-                  className="w-5 h-5"
-                />
-                Continue with Google
-              </button>
-            </div>
-          </motion.div>
+              <div className="flex mb-8 bg-neutral-950/60 p-1 rounded-lg gap-1 border border-neutral-800">
+                <button 
+                  className={`flex-1 py-3 px-3 rounded-md text-sm transition-all duration-300 
+                  ${isLogin 
+                    ? 'bg-neutral-800 text-white' 
+                    : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200'}`}
+                  onClick={() => setIsLogin(true)}
+                >
+                  Login
+                </button>
+                <button 
+                  className={`flex-1 py-3 px-3 rounded-md text-sm transition-all duration-300 
+                  ${!isLogin 
+                    ? 'bg-neutral-800 text-white' 
+                    : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200'}`}
+                  onClick={() => setIsLogin(false)}
+                >
+                  Sign Up
+                </button>
+              </div>
+
+              {isLogin ? (
+                <LoginForm onLogin={handleLogin} />
+              ) : (
+                <SignupForm onSuccess={handleRegistrationSuccess} />
+              )}
+
+              {error && (
+                <div className="mt-4 text-red-500 text-sm text-center">
+                  {error}
+                </div>
+              )}
+
+              <div className="mt-6">
+                <button 
+                  onClick={handleGoogleLogin}
+                  className="w-full flex items-center justify-center gap-3 bg-white/[0.15] backdrop-blur-sm border border-white/20 text-white py-3.5 px-4 rounded-xl hover:bg-white/25 transition-all duration-300 hover:shadow-lg hover:shadow-white/10 group font-medium"
+                >
+                  <img 
+                    src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                    alt="Google" 
+                    className="w-5 h-5 transition-transform group-hover:scale-110"
+                  />
+                  <span className="text-[0.95rem]">Continue with Google</span>
+                </button>
+              </div>
+            </motion.div>
+          </BackgroundGradient>
         </div>
       </div>
     </div>
