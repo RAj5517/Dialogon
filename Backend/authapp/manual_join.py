@@ -53,6 +53,8 @@ def manual_join_meeting(request):
         # Extract meeting details from request
         meeting_link = request.data.get('meeting_link')
         user_name = request.data.get('user_name', 'Dialogon Assistant')
+        user_email = request.data.get('user_email')
+        event_index = request.data.get('event_index')
         
         if not meeting_link:
             return Response({
@@ -96,6 +98,15 @@ def manual_join_meeting(request):
             '--link', meeting_link,
             '--name', user_name
         ]
+        
+        # Add email and event index if provided
+        if user_email:
+            command.extend(['--email', user_email])
+            logger.info(f"Using user email: {user_email}")
+            
+        if event_index is not None:
+            command.extend(['--event_index', str(event_index)])
+            logger.info(f"Using event index: {event_index}")
         
         logger.info(f"Launching command: {' '.join(command)}")
         

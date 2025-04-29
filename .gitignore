@@ -96,3 +96,11 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Google API keys
+Backend/keys/
+Backend/keys/*.json
+dialogon-stt-key.json
+
+# Chrome user data
+Backend/chrome_user_data/

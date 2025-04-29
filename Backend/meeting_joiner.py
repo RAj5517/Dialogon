@@ -10,15 +10,8 @@ import subprocess
 import random
 import argparse
 import logging
-try:
-    from record_meet import record_meet, start_recording
-    RECORDING_AVAILABLE = True
-except ImportError:
-    RECORDING_AVAILABLE = False
-    def start_recording():
-        logger.warning("Recording functionality not available. Missing required modules.")
-        
-from summarize_meet import summarize_meet
+import signal
+from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -31,6 +24,37 @@ logging.basicConfig(
     filemode='a'
 )
 logger = logging.getLogger('meeting_joiner')
+
+# Flag to track availability of recording/transcription features
+RECORDING_AVAILABLE = False
+TRANSCRIPTION_AVAILABLE = False
+
+# Try to import recording module
+try:
+    from record_meet import record_meet, start_recording
+    RECORDING_AVAILABLE = True
+    logger.info("Recording functionality is available")
+except ImportError as e:
+    logger.warning(f"Recording functionality not available: {str(e)}")
+    def record_meet():
+        logger.warning("Recording requested but functionality not available")
+        return None
+    def start_recording():
+        logger.warning("Recording functionality not available")
+
+# Try to import transcription module
+try:
+    from summarize_meet import summarize_meet
+    TRANSCRIPTION_AVAILABLE = True
+    logger.info("Transcription functionality is available")
+except ImportError as e:
+    logger.warning(f"Transcription functionality not available: {str(e)}")
+    def summarize_meet(audio_file):
+        logger.warning("Transcription requested but functionality not available")
+        return "Transcription not available due to missing dependencies or credentials"
+
+# MongoDB connection for updating event status
+DB_URI = os.getenv('DB_URI')
 
 def get_chrome_path():
     """Get the Chrome executable path"""
@@ -57,10 +81,38 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Join a Google Meet meeting')
     parser.add_argument('--link', type=str, required=True, help='Meeting link')
     parser.add_argument('--name', type=str, default='Dialogon Assistant', help='Name to use in the meeting')
+    parser.add_argument('--email', type=str, default=None, help='Email of the user who owns the event')
+    parser.add_argument('--event_index', type=int, default=-1, help='Index of the event in the user events array')
     
     return parser.parse_args()
 
-def join_meeting(meet_link, user_name):
+def update_event_status(email, event_index, status):
+    """Update the event status in MongoDB"""
+    if email and event_index >= 0:
+        try:
+            client = MongoClient(DB_URI)
+            db = client.user
+            users = db.users
+            
+            logger.info(f"Updating event status to '{status}' for user {email}, event index {event_index}")
+            
+            result = users.update_one(
+                {"email": email},
+                {"$set": {f"events.{event_index}.status": status}}
+            )
+            
+            if result.modified_count > 0:
+                logger.info(f"Successfully updated event status to '{status}'")
+            else:
+                logger.warning(f"Failed to update event status: no document modified")
+                
+        except Exception as e:
+            logger.error(f"Error updating event status: {str(e)}")
+        finally:
+            if 'client' in locals():
+                client.close()
+
+def join_meeting(meet_link, user_name, user_email=None, event_index=-1):
     """Join a meeting with the provided details"""
     try:
         logger.info(f"Joining meeting: {meet_link} as {user_name}")
@@ -132,27 +184,60 @@ def join_meeting(meet_link, user_name):
                 time.sleep(0.5)
         
         logger.info("Successfully joined the meeting")
+        
+        # Update status to "joined" (in process)
+        if user_email and event_index >= 0:
+            update_event_status(user_email, event_index, "joined")
 
-        sound_file_path = record_meet()
+        # Only attempt recording if the functionality is available
+        sound_file_path = None
+        if RECORDING_AVAILABLE:
+            try:
+                sound_file_path = record_meet()
+                logger.info(f"Recording saved to: {sound_file_path}")
+            except Exception as e:
+                logger.error(f"Error recording meeting: {str(e)}")
+        else:
+            logger.warning("Recording functionality not available, skipping recording")
 
-        logger.info(sound_file_path)
-
-        with open("final_summ.txt", 'w+') as f:
-            f.write("Summary:\n" + summarize_meet(sound_file_path))
+        # Only attempt transcription if the functionality is available and recording succeeded
+        if TRANSCRIPTION_AVAILABLE and sound_file_path:
+            try:
+                summary = summarize_meet(sound_file_path)
+                with open("final_summ.txt", 'w+') as f:
+                    f.write("Summary:\n" + summary)
+                logger.info("Meeting summary saved to final_summ.txt")
+            except Exception as e:
+                logger.error(f"Error creating meeting summary: {str(e)}")
+        else:
+            logger.warning("Transcription functionality not available or recording failed, skipping transcription")
         
         # Keep the browser open
-        while True:
+        meeting_ongoing = True
+        while meeting_ongoing:
             time.sleep(60)  # Check every minute
             try:
                 # Check if we're still in the meeting
-                driver.current_url
+                current_url = driver.current_url
+                if "meet.google.com" not in current_url or "hangoutsmeet" not in current_url:
+                    meeting_ongoing = False
+                    logger.info("Meeting has ended or bot was removed from the meeting")
             except:
-                break
+                meeting_ongoing = False
+                logger.info("Browser was closed or connection was lost")
+        
+        # Update status to "completed" when the meeting ends
+        if user_email and event_index >= 0:
+            update_event_status(user_email, event_index, "completed")
+            logger.info(f"Meeting completed. Updated status for user {user_email}, event index {event_index}")
         
         return True
         
     except Exception as e:
         logger.error(f"Error joining meeting: {str(e)}")
+        # Update status to "completed" if there was an error
+        if user_email and event_index >= 0:
+            update_event_status(user_email, event_index, "completed")
         return False
 
 def main():
@@ -161,7 +246,9 @@ def main():
     
     join_meeting(
         meet_link=args.link,
-        user_name=args.name
+        user_name=args.name,
+        user_email=args.email,
+        event_index=args.event_index
     )
 
 if __name__ == '__main__':

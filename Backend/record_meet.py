@@ -1,3 +1,4 @@
+from os import write
 import soundcard as sc
 import numpy as np
 import datetime
@@ -48,7 +49,7 @@ def record_meet():
         # Record audio
         with speakers.recorder(samplerate=48000) as mic:
             while True:
-                data = recorder.record(numframes=1024)
+                data = mic.record(numframes=1024)
                 frames.append(data)
     except KeyboardInterrupt:
         print("\n[INFO] Stopped. Saving file...")
