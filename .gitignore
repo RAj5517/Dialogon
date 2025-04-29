@@ -1,6 +1,7 @@
 .venv/
 .env
 venv/
+venv/
 **/__pycache__/
 config/firebase_credentials.json
 config/firebase_credentials.json
