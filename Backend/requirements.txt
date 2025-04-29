@@ -23,6 +23,14 @@ sounddevice==0.4.6
 scipy==1.12.0
 wavio==0.0.8
 
+# Audio Processing
+pydub==0.25.1
+ffmpeg-python==0.2.0
+
 # Utils
 python-dateutil==2.8.2
 pywin32==306; platform_system == "Windows"
+
+# Google Cloud
+google-cloud-speech==2.25.1
+google-cloud-storage==2.14.0

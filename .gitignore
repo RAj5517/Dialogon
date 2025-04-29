@@ -1,6 +1,7 @@
 .venv/
 .env
 venv/
+venv/
 **/__pycache__/
 config/firebase_credentials.json
 config/firebase_credentials.json
@@ -96,3 +97,14 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Google API keys
+Backend/keys/
+Backend/keys/*.json
+dialogon-stt-key.json
+**/dialogon-stt-key.json
+**/*-key.json
+**/*credentials*.json
+
+# Chrome user data
+Backend/chrome_user_data/

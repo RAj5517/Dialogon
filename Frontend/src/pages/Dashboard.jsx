@@ -86,6 +86,8 @@ const Dashboard = () => {
   };
 
   const handleEditClick = (event, index) => {
+    // Add index to the event object itself for reference later
+    event.index = index;
     setEditingEvent({ ...event, index });
     setEventData({
       title: event.title,
@@ -231,15 +233,44 @@ const Dashboard = () => {
   };
 
   // Add this function to handle manual meeting joining
-  const handleManualJoin = async (meetingLink) => {
+  const handleManualJoin = async (meetingLink, event, index) => {
     try {
       setLoading(true);
       console.log("Sending request to join meeting:", meetingLink); // Debug log
+      
+      const user = JSON.parse(localStorage.getItem("user"));
+      
+      // First update the event status to "joined" in the database
+      if (event && index !== undefined) {
+        try {
+          const updateResponse = await api.updateEvent(
+            user.email,
+            index,
+            {
+              title: event.title,
+              date: event.date,
+              time: event.time,
+              meeting_link: event.meeting_link,
+              status: "joined",
+              user_email: user.email
+            }
+          );
+          
+          // Update local events state
+          setEvents(updateResponse.events);
+        } catch (error) {
+          console.error("Error updating event status:", error);
+        }
+      }
+      
+      // Then launch the meeting assistant
       const response = await axios.post(
         "http://localhost:8000/api/auth/manual-join/",
         {
           meeting_link: meetingLink,
           user_name: "Dialogon Assistant",
+          user_email: user?.email,
+          event_index: index
         }
       );
 
@@ -714,7 +745,8 @@ const Dashboard = () => {
                           `${event.date} ${event.time}`
                         );
                         const now = new Date();
-                        return eventDateTime > now;
+                        // Only show scheduled and joined events that are in the future
+                        return eventDateTime > now && event.status !== "completed";
                       })
                     ).map((event, index) => (
                       <div
@@ -794,7 +826,7 @@ const Dashboard = () => {
                               {/* Launch Assistant Button */}
                               <button
                                 onClick={() =>
-                                  handleManualJoin(event.meeting_link)
+                                  handleManualJoin(event.meeting_link, event, event.index)
                                 }
                                 className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl hover:bg-indigo-500/20 hover:border-indigo-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={loading}
@@ -900,41 +932,127 @@ const Dashboard = () => {
               <h2 className="text-2xl font-bold mb-6 text-neutral-200">
                 Completed Events
               </h2>
-              {/* Coming Soon Overlay */}
-              <div className="absolute inset-0 top-0 left-0 right-0 bottom-0 bg-neutral-900/90 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10">
-                <div className="text-2xl font-bold mb-2 text-neutral-200">
-                  Coming Soon
-                </div>
-                <p className="text-neutral-400 text-center px-4">
-                  Meeting summaries and recordings will be available here
-                </p>
-              </div>
-              {/* Placeholder Content */}
-              <div className="space-y-4 opacity-30 min-h-[300px]">
-                <div className="bg-neutral-800 p-6 rounded-lg border border-neutral-700">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-lg text-neutral-200">
-                        Sample Completed Event
-                      </h3>
-                      <p className="text-neutral-400 mt-2">Meeting Summary</p>
-                      <div className="mt-2 space-y-1">
-                        <p className="text-neutral-500">• Discussion point 1</p>
-                        <p className="text-neutral-500">• Discussion point 2</p>
-                        <p className="text-neutral-500">• Discussion point 3</p>
-                      </div>
-                      <button
-                        className="text-neutral-400 mt-3 opacity-50 cursor-not-allowed"
-                        disabled
-                      >
-                        View Recording
-                      </button>
-                    </div>
-                    <span className="px-3 py-1 bg-neutral-600/20 text-neutral-400 rounded-full text-sm">
-                      Completed
-                    </span>
+              {/* Coming Soon Overlay - Only show when no completed events */}
+              {!events.some(event => event.status === "completed") && (
+                <div className="absolute inset-0 top-0 left-0 right-0 bottom-0 bg-neutral-900/90 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10">
+                  <div className="text-2xl font-bold mb-2 text-neutral-200">
+                    Coming Soon
                   </div>
+                  <p className="text-neutral-400 text-center px-4">
+                    Meeting summaries and recordings will be available here
+                  </p>
                 </div>
+              )}
+              
+              {/* Completed Events Content */}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {events.filter(event => event.status === "completed").length > 0 ? (
+                  sortEventsByDate(
+                    events.filter(event => event.status === "completed")
+                  ).map((event, index) => (
+                    <div
+                      key={index}
+                      className="bg-neutral-800 p-6 rounded-lg border border-neutral-700 hover:border-neutral-600 transition-all duration-300 group hover:shadow-lg hover:shadow-black/20"
+                    >
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg group-hover:text-blue-400 transition-colors truncate">
+                            {event.title}
+                          </h3>
+                          <p className="text-gray-400 mt-2">
+                            {new Date(event.date).toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              }
+                            )}
+                          </p>
+                          <p className="text-gray-400">
+                            {new Date(
+                              `1970-01-01T${event.time}:00`
+                            ).toLocaleTimeString([], {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </p>
+                          <div className="mt-2">
+                            <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">
+                              Completed
+                            </span>
+                          </div>
+                          
+                          <div className="mt-3 text-neutral-400 text-sm">
+                            <p>Meeting summary will be available soon</p>
+                          </div>
+                          
+                          <div className="mt-2 flex items-center gap-4">
+                            <button
+                              onClick={() => handleDeleteEvent(event, index)}
+                              className="mt-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-2 px-4 rounded-lg text-[0.95rem] font-medium cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1 border border-red-500/20"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full text-xs whitespace-nowrap">
+                          {new Date(
+                            `2000-01-01 ${event.time}`
+                          ).toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="min-h-[300px]">
+                    {/* This content will be hidden by the overlay if there are no completed events */}
+                    <div className="bg-neutral-800 p-6 rounded-lg border border-neutral-700 opacity-30">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold text-lg text-neutral-200">
+                            Sample Completed Event
+                          </h3>
+                          <p className="text-neutral-400 mt-2">Meeting Summary</p>
+                          <div className="mt-2 space-y-1">
+                            <p className="text-neutral-500">• Discussion point 1</p>
+                            <p className="text-neutral-500">• Discussion point 2</p>
+                            <p className="text-neutral-500">• Discussion point 3</p>
+                          </div>
+                          <button
+                            className="text-neutral-400 mt-3 opacity-50 cursor-not-allowed"
+                            disabled
+                          >
+                            View Recording
+                          </button>
+                        </div>
+                        <span className="px-3 py-1 bg-neutral-600/20 text-neutral-400 rounded-full text-sm">
+                          Completed
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
