@@ -28,6 +28,36 @@ const Dashboard = () => {
   const [manualJoinLink, setManualJoinLink] = useState("");
   const [showManualJoinModal, setShowManualJoinModal] = useState(false);
 
+  // Live clock state
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Live clock effect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Format time as HH:MM:SS
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour12: true,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  // Format date as Day, Month Date
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   // Notification system
   const [notification, setNotification] = useState({
     show: false,
@@ -461,12 +491,24 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="text-2xl font-bold text-neutral-200">Dialogon</div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-6 py-2 rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-red-500/10 border border-red-500/20"
-            >
-              Logout
-            </button>
+            
+            {/* Live Clock */}
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <div className="text-2xl font-mono font-bold text-indigo-400 tracking-wider">
+                  {formatTime(currentTime)}
+                </div>
+                <div className="text-xs text-neutral-400">
+                  {formatDate(currentTime)}
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-6 py-2 rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-red-500/10 border border-red-500/20"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -932,18 +974,6 @@ const Dashboard = () => {
               <h2 className="text-2xl font-bold mb-6 text-neutral-200">
                 Completed Events
               </h2>
-              {/* Coming Soon Overlay - Only show when no completed events */}
-              {!events.some(event => event.status === "completed") && (
-                <div className="absolute inset-0 top-0 left-0 right-0 bottom-0 bg-neutral-900/90 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10">
-                  <div className="text-2xl font-bold mb-2 text-neutral-200">
-                    Coming Soon
-                  </div>
-                  <p className="text-neutral-400 text-center px-4">
-                    Meeting summaries and recordings will be available here
-                  </p>
-                </div>
-              )}
-              
               {/* Completed Events Content */}
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                 {events.filter(event => event.status === "completed").length > 0 ? (
@@ -983,10 +1013,6 @@ const Dashboard = () => {
                             <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">
                               Completed
                             </span>
-                          </div>
-                          
-                          <div className="mt-3 text-neutral-400 text-sm">
-                            <p>Meeting summary will be available soon</p>
                           </div>
                           
                           <div className="mt-2 flex items-center gap-4">
